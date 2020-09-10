@@ -11,6 +11,32 @@ class animeTitle:
         self.eiscore = eiscore
         self.dscore = dscore
         self.poscore = poscore
+        
+def _numinput(limit, question):
+    while True:
+        global debugMode
+        global cancelAdd
+        if debugMode:
+            return 10
+        elif cancelAdd:
+            return -1
+        try:
+            test = int(input(f'{question} (1-{str(limit)}): '))
+            if test == 'debug':
+                debugMode = True
+                return 10
+            if 0 < test < (limit+1):
+                return test
+            else:
+                raise(ValueError)
+        except KeyboardInterrupt:
+            cancelAdd = True
+            return -1
+        except EOFError as e:
+            print(e)
+        except ValueError:
+            print('Please type 1-10')
+            
 def addTitle(name):
     clear()
     global debugMode
@@ -77,33 +103,6 @@ Playing Field""")
         array.append(animeTitle(name, _avgscore, [_pqscore, _pq1, _pq2, _pq3, _pq4], 
                                 [_eiscore, _ei1, _ei2], _dscore, [_poscore, _po1, _po2, _po3, _po4]))
         input('\nPress Enter to continue...')
-
-
-def _numinput(limit, question):
-    while True:
-        global debugMode
-        global cancelAdd
-        if debugMode:
-            return 10
-        elif cancelAdd:
-            return -1
-        try:
-            test = int(input(f'{question} (1-{str(limit)}): '))
-            if test == 'debug':
-                debugMode = True
-                return 10
-            if 0 < test < (limit+1):
-                return test
-            else:
-                raise(ValueError)
-        except KeyboardInterrupt:
-            cancelAdd = True
-            return -1
-        except EOFError as e:
-            print(e)
-        except ValueError:
-            print('Please type 1-10')
-
 
 while True:
     clear()
