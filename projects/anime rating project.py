@@ -1,4 +1,3 @@
-import threading as th
 import os
 array = []
 clear = lambda: os.system('clear')
