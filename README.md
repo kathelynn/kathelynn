@@ -1,4 +1,8 @@
-### Hi there 👋
+### Hiiii ヾ(＾∇＾)
+[My Website](https://kathy.aishiteru.moe) | [My Reddit](https://www.reddit.com/user/kathelynn/) | [My Twitter](https://twitter.com/chloekaitleen)   
+I'm taking on Computer Science because it's very interesting and very cool. ❤️
+
+
 
 <!--
 **kathelynn/kathelynn** is a ✨ _special_ ✨ repository because its `README.md` (this file) appears on your GitHub profile.
