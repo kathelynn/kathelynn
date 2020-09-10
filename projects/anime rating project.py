@@ -99,7 +99,7 @@ Playing Field""")
     print('\nPersonal Opinion score: ' + str(int(_poscore))+'/25')
     _avgscore = _pqscore + _eiscore  + _dscore + _poscore
     print('\nAverage score: ' + str(int(_avgscore))+'/100')
-    if cancelAdd == False:
+    if not cancelAdd:
         array.append(animeTitle(name, _avgscore, [_pqscore, _pq1, _pq2, _pq3, _pq4], 
                                 [_eiscore, _ei1, _ei2], _dscore, [_poscore, _po1, _po2, _po3, _po4]))
         input('\nPress Enter to continue...')
