@@ -83,9 +83,9 @@ def _numinput(limit, question):
     while True:
         global debugMode
         global cancelAdd
-        if debugMode == True:
+        if debugMode:
             return 10
-        elif cancelAdd == True:
+        elif cancelAdd:
             return -1
         try:
             test = int(input(f'{question} (1-{str(limit)}): '))
