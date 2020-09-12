@@ -23,4 +23,4 @@ async def on_message(message):
     print('Message from {0.author}: {0.content}'.format(message))
 
 
-client.run('NzU0MTg5NjE2NTI5MTQ1OTA3.X1xH0A.787j1r42JUsydKqVIClTKg1LLzo')
+client.run('token')
