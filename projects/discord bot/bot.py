@@ -65,4 +65,4 @@ async def on_message(message):
 #async def herro(message):
 #    await message.channel.send(f'Hello qtpi!')
 
-client.run('NzU0MTg5NjE2NTI5MTQ1OTA3.X1xH0A.BLv8xSEnMlX5gbuGHB6Y_KuVvFI') # put the code in here
+client.run('') # put the code in here
