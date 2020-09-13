@@ -1,19 +1,41 @@
-from discord.ext import commands
+#from discord.ext import commands
 import discord
 import json
-with open("prefixes.json") as f:
-    f.seek(0)
-    prefixes = json.load(f)
-    print(prefixes)
-default_prefix = "$"
+#default_prefix = "$"
 
-def prefix(bot, message):
-    id = message.guild.id
-    print('prefix grabbed')
-    return prefixes.get(id, default_prefix)
+#def prefix(bot, message):
+#    id = message.guild.id
+#    return prefixes.get(id, default_prefix)
+
+def prefixupdate(guild, prefix):
+    global prefixes
+    with open("prefixes.json", "w+") as f:
+        prefixes[str(guild.id)] = prefix
+        f.seek(0)
+        json.dump(prefixes, f)
+
+with open("prefixes.json") as f: prefixes = json.load(f)
+
+async def commands(message, prefix):
+    if prefix in message.content[:len(prefix)]:
+        message.content = message.content[len(prefix):].lower()
+        if 'hello' in message.content[0:5]:
+            await message.channel.send('bracket works')
+        elif 'prefix' in message.content[0:6]:
+            args = message.content[7:]
+            #symbol = "!@$&"
+            #if args not in symbol: message.channel.send('Symbols not in argument: !@#$%^&*\|;:,.<>/?') 
+            prefixupdate(message.guild, args)
+        elif 'help' in message.content[0:5]:
+            pf = prefix
+            embedmessage = discord.Embed(title="UwU you're a cute", description=f"{pf}help - list of commands\n{pf}prefix - change bot prefix for this server\n{pf}hello - surprises")
+            await message.channel.send(content=None, embed=embedmessage)
+        else:
+            message.channel.send("That's not a command, try >help")
+        
 
 client = discord.Client()
-bot = commands.Bot(command_prefix="$")
+#bot = commands.Bot(command_prefix=prefixes)
 
 @client.event
 async def on_ready():
@@ -33,13 +55,14 @@ async def on_ready():
 @client.event
 async def on_message(message):
         print('Message from {0.author}: {0.content}'.format(message))
-        if '!' in message.content[:1]:
-            if 'hello' in message.content[1:]:
-                await message.channel.send(f'Hello qtpi! why are you using brackets')
-    
-@bot.command
-async def pleasework(message):
-    await message.channel.send(f'Hello qtpi!')
+        try: prefix = prefixes[str(message.guild.id)] ## prefix check
+        except: prefixupdate(message.guild, "$")
+        if prefix in message.content[:len(prefix)]:
+            print('triggered')
+            await commands(message, prefix)
 
-client.run('') # put the code in here
-bot.run()
+#@bot.command
+#async def herro(message):
+#    await message.channel.send(f'Hello qtpi!')
+
+client.run('NzU0MTg5NjE2NTI5MTQ1OTA3.X1xH0A.BLv8xSEnMlX5gbuGHB6Y_KuVvFI') # put the code in here
