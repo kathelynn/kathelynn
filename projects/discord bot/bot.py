@@ -21,17 +21,20 @@ async def commands(message, prefix):
         message.content = message.content[len(prefix):].lower()
         if 'hello' in message.content[0:5]:
             await message.channel.send('bracket works')
-        elif 'prefix' in message.content[0:6]:
+        elif 'prefix ' in message.content[0:7]:
             args = message.content[7:]
             #symbol = "!@$&"
             #if args not in symbol: message.channel.send('Symbols not in argument: !@#$%^&*\|;:,.<>/?') 
             prefixupdate(message.guild, args)
-        elif 'help' in message.content[0:5]:
+        elif 'say ' in message.content[0:4]:
+            await message.channel.send(message.content[4:])
+        elif 'help' in message.content[0:4]:
             pf = prefix
-            embedmessage = discord.Embed(title="UwU you're a cute", description=f"{pf}help - list of commands\n{pf}prefix - change bot prefix for this server\n{pf}hello - surprises")
+            embedmessage = discord.Embed(title=f"UwU you're a cute, {message.author}", description=f"{pf}help - list of commands"
+            "\n{pf}prefix - change bot prefix for this server\n{pf}hello - surprises\n{pf}say - say something")
             await message.channel.send(content=None, embed=embedmessage)
         else:
-            message.channel.send("That's not a command, try >help")
+            await message.channel.send(f"That's not a command, try {prefix}help")
         
 
 client = discord.Client()
@@ -65,4 +68,4 @@ async def on_message(message):
 #async def herro(message):
 #    await message.channel.send(f'Hello qtpi!')
 
-client.run('NzU0MTg5NjE2NTI5MTQ1OTA3.X1xH0A.BLv8xSEnMlX5gbuGHB6Y_KuVvFI') # put the code in here
+client.run('') # put the code in here
