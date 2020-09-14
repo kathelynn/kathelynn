@@ -1,48 +1,53 @@
-#from discord.ext import commands
+## To be used for error checking
+def p():
+    global n
+    try: n += 1
+    except NameError: n = 1
+    print(n)
+    
 import os
 from dotenv import load_dotenv
 import discord
 from discord.ext import commands
 import json
 
-def prefix(bot, message, mode='r', prefix='$'):
+def setPrefix(bot=None, message=None, mode='r', prefix=None):
+    global prefixes
     guild_id = str(message.guild.id) # json only supports string for name
+
     if 'r' in mode:
-        with open("prefixes.json") as f:
-            prefixes = json.load(f)
-        if guild_id not in prefixes:
-            prefix(bot, message, 'w', prefix)
+        try:
+            with open("prefixes.json") as f:
+                prefixes = json.load(f)
+        except FileNotFoundError:
+            with open("prefixes.json", "x") as f:
+                prefixes = {"692647317425094686": "$"}
+                json.dump(prefixes, f)
+
     if 'w' in mode:
         with open("prefixes.json", "w") as f:
-            prefixes[guild_id] = prefix
+            if guild_id not in prefixes:
+                setPrefix(message=message, mode='w', prefix=prefix)
+            else: prefixes[guild_id] = prefix
             json.dump(prefixes, f)
-    return prefixes[guild_id]
 
-#def prefix(bot, message):
-#    guild = message.guild
-#    return prefixes.get(id, default_prefix)
+    if guild_id not in prefixes:
+        return "$"
+    else: return prefixes[guild_id]
 
-bot = commands.Bot(command_prefix=prefix)
+async def actionEmbed(message, args=None, **kwargs):
+    embed = discord.Embed(**kwargs)
+    if 'authorName' in args: embed.set_author(name=args['authorName'])
+    if 'authorIcon' in args: embed.set_author(name=args['authorName'], icon_url=args['authorIcon'])
+    if 'imageURL' in args: embed.set_image(url=args['imageURL'])
+    await message.send(embed=embed)
 
-#async def commands(message, prefix):
-#    if prefix in message.content[:len(prefix)]:
-#        message.content = message.content[len(prefix):].lower()
-#        if 'hello' in message.content[0:5]:
-#            await message.channel.send('bracket works')
-#        elif 'prefix ' in message.content[0:7]:
-#            args = message.content[7:]
-#            #symbol = "!@$&"
-#            #if args not in symbol: message.channel.send('Symbols not in argument: !@#$%^&*\|;:,.<>/?') 
-#            prefixupdate(message.guild, args)
-#        elif 'say ' in message.content[0:4]:
-#            await message.channel.send(message.content[4:])
-#        elif 'help' in message.content[0:4]:
-#            pf = prefix
-#            embedmessage = discord.Embed(title=f"UwU you're a cute, {message.author}", description=f"{pf}help - list of commands"
-#            "\n{pf}prefix - change bot prefix for this server\n{pf}hello - surprises\n{pf}say - say something")
-#            await message.channel.send(content=None, embed=embedmessage)
-#        else:
-#            await message.channel.send(f"That's not a command, try {prefix}help")
+def group(*args):
+    args = ', '.join(list(*args[:len(*args)]))
+    args = f'{args}, and {str(*args[len(*args):])}'
+    return args
+
+bot = commands.Bot(command_prefix=setPrefix)
 
 @bot.event
 async def on_ready():
@@ -63,17 +68,34 @@ async def on_ready():
 @bot.event
 async def on_message(message):
         print('{0.author} from {0.channel}: {0.content}'.format(message))
-        #try: prefix = prefixes[str(message.guild.id)] ## prefix check
-        #except: prefixupdate(message.guild, "$")
-        #if prefix in message.content[:len(prefix)]:
-        #    print('triggered')
-        #    await commands(message, prefix)
         await bot.process_commands(message)
 
 @bot.command()
-async def hello(message):
-    await message.send(f'Hello qtpi!')
+async def hello(ctx):
+    await ctx.send(f'Hello qtpi!')
+
+@bot.command()
+async def say(ctx,arg='What should I say?'):
+    await ctx.send(arg)
+
+@bot.command()
+@commands.has_permissions(administrator=True)
+async def settings(ctx, arg=None, arg2=None):
+    guild = ctx.guild
+    header = {'authorName':guild.name, 'authorIcon':guild.icon_url}
+    pf = setPrefix(message=ctx, mode='') # setting mode to blank as the variable from memory is only needed
+    if arg == None:
+        await actionEmbed(ctx, header,
+        description=f"`prefix` : `{pf}`"
+        )
+    elif arg == 'prefix':
+        title = 'Settings > Prefix'
+        description = f'Prefix for `{guild.id}`: `{pf}`'
+        if arg2 == None: await actionEmbed(ctx, header, title=title, description=description)
+        else:
+            prefix = setPrefix(message=ctx, mode='rw', prefix=arg2)
+            await actionEmbed(ctx, header, title=title, description=f'{description} > `{prefix}`')
 
 load_dotenv()
-TOKEN = os.getenv('DISCORD_TOKEN')
+TOKEN = os.getenv('DISCORD')
 bot.run(TOKEN) # put the code in here
