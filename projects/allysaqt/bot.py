@@ -55,6 +55,7 @@ def set_prefix(bot=None, message=None, guild_id=None, mode='r', prefix='a$'):
     return store(guild_id, mode, category="settings", item="prefix", var=prefix)
 
 def check():
+    pass
 
 def create():
     pass
