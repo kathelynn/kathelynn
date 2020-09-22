@@ -1,38 +1,17 @@
-## To be used for error checking
+# pylint: disable=undefined-variable
+#: To be used for error checking
 def p(a):
     print(a)
 
-import os
-from dotenv import load_dotenv
-import discord
-from discord.ext import commands
-from discord.ext.commands import MissingPermissions
-import json
-#from customcommands import *
+#from dotenv import load_dotenv
+import importlib
+module_list = ['discord', 'discord.ext.commands', 'os', 'asyncio', 'json']
+for lib in module_list:
+    globals()[lib] = importlib.import_module(lib)
+from modules import *
 
-## Prefix storage module, will be used later for storing different kinds of things outside just prefixes
-def store(guild_id=None, mode='r', category=None, item=None, var=None):
-    if 'r' in mode:
-        try:
-            with open("allysaqt.json") as f:
-                storage = json.load(f)
-        except FileNotFoundError:
-            print("If you'd like to run this bot, please follow the instructions found in README.md")
-
-    if 'w' in mode:
-        with open("allysaqt.json", "w") as f:
-            storage[guild_id][category][item] = var
-            json.dump(storage, f)
-
-    if guild_id not in storage:
-        if not var: 
-            raise Exception('No default variable was set!')
-        else: return var
-    else: 
-        return storage[guild_id][category][item]
-
-## Embed module, to be used for making embeds with one line of code
-async def action_embed(message, args=None, **kwargs):
+## Embed module, to be used for making embeds with one line of code ##
+async def action_embed(message, args=None, sendMessage=True, **kwargs):
     embed = discord.Embed(**kwargs)
     if 'authorName' in args:
         embed.set_author(name=args['authorName'])
@@ -40,36 +19,49 @@ async def action_embed(message, args=None, **kwargs):
         embed.set_author(name=args['authorName'], icon_url=args['authorIcon'])
     if 'imageURL' in args:
         embed.set_image(url=args['imageURL'])
-    await message.send(embed=embed)
+    if sendMessage:
+        return await message.send(embed=embed)
+    return embed
 
-## For action embeds when multiple people are in
+## For action embeds when multiple people are in ##
 def group(*args):
     args = ', '.join(list(*args[:len(*args)]))
     args = f'{args}, and {str(*args[len(*args):])}'
     return args
 
-def set_prefix(bot=None, message=None, guild_id=None, mode='r', prefix='a$'):
-    if not guild_id: guild_id = message.guild.id
-    if isinstance(guild_id, int):
-        guild_id = str(guild_id)
-    return store(guild_id, mode, category="settings", item="prefix", var=prefix)
+def plurality(num, item):
+    if num < 2:
+        return f'{num} {item}'
+    return f'{num} {item}s'
 
-def check():
-    pass
-
-def create():
-    pass
+def cleanup():
+    for x in reactions:
+        if x == {}:
+            print(reactions.pop(y))
+        else:
+            for y in x:
+                if y == []:
+                    print(reactions[x].pop(y))
 
 ##############
 ###COMMANDS###
 ##############
-bot = commands.Bot(command_prefix=set_prefix)
+
+commands = discord.ext.commands
+bot = commands.Bot(command_prefix=settings.set_prefix)
 
 @bot.event
 async def on_ready():
+    global reactions
+    reactions = {}
+
     print(f'Logged on as {bot.user}!')
     channel = bot.get_channel(754172127019794513)
     await channel.send('I am awake~')
+
+    while True: # cleanup service
+        cleanup()
+        await asyncio.sleep(3600)    
     #while True:
     #    text = input('> ')
     #    if not text[0] == '#':
@@ -83,35 +75,103 @@ async def on_ready():
 
 @bot.event
 async def on_message(message):
-        print('{0.author} from {0.channel}: {0.content}'.format(message))
-        await bot.process_commands(message)
+    print('{0.author} from {0.channel}: {0.content}'.format(message))
+    await bot.process_commands(message)
 
 @bot.command(aliases=['hi'])
-async def hello(ctx):
-
-    await ctx.send(f'Hello, <@{ctx.author.id}> qtpi!')
+async def hello(ctx): 
+    message = f'Hello, <@{ctx.author.id}> qtpi!'
+    await ctx.send(message)
 
 @bot.command()
 async def say(ctx, *args):
-    if args == ():
-        await ctx.send('What should I say, qtpi?')
+    message = 'What should I say, qtpi?'
+    if args == (): await ctx.send(message)
     else: await ctx.send(' '.join(args))
 
+@bot.event
+async def on_reaction_add(reaction, user):
+    global reactions
+    react = reaction.emoji
+    print(react)
+    channel_id = str(reaction.message.channel.id)
+    user_id = str(user.id)
+    insert = {channel_id: {user_id: react}}
+    reactions.update(insert) # note: in python 3.9, operator `|=` exists for dictionary.
+    print(reactions)
+    await asyncio.sleep(16)
+
+    reactions[channel_id][user_id].remove(react)
+    if reactions[channel_id][user_id] == []:
+        del reactions[channel_id][user_id]
+    if reactions[channel_id] == {}:
+        del reactions[channel_id]
+    #print(reactions[message.guild.id][message.channel.id].pop(message.id))
+    
 @bot.command(aliases=['ccommands', 'cc'])
-async def customcommands(ctx):
+async def customcommands(ctx, botmsg=None, path=0, end=False):
     guild = ctx.guild
     header = {'authorName': guild.name, 'authorIcon': guild.icon_url}
     title = 'Custom Commands'
-    description = "Work in Progress\n`1.` Foo\n`2.`Bar"
     footer = None
     color = 800868
+    buttons = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟']
 
-    await action_embed(ctx, header, title=title, description=description, color=color, footer=footer)
+    if path == 'cancel':
+        description = "Operation cancelled."
+        color = 16711680
+        end = True
+    if path == 'timeout':
+        description = "Timeout exceeded. Please try again"
+        color = 16711680
+        end = True
+
+    if path == 0:
+        choices = ['a', 'b']
+        description = "Work in Progress\n`1.` Foo\n`2.` Bar"
+        botmsg = await action_embed(ctx, header, title=title, description=description, color=color, footer=footer)
+    elif path[0] == 'a':
+        description = 'End'
+        end = True
+    elif path[0] == 'b':
+        description = "Work in progress\n`1.` Foobar\n`2.` Barfoo"
+        choices = ['ba', 'bb']
+        if path[1] == 'a':
+            description = "Foobar picked!"
+        if path[1] == 'b':
+            description = "Barfoo picked!"
+
+    if not path == 0:
+        await botmsg.edit(embed=action_embed(ctx, header, title=title, description=description, color=color, footer=footer))
+
+    if not end:
+        for x in range(0, len(choices)):
+            await botmsg.add_reaction(buttons[x])
+        await botmsg.add_reaction('❎')
+
+        for x in range(0,15):
+            if str(ctx.author.id) in reactions[str(ctx.channel.id)]:
+                for item in buttons:
+                    if reactions[str(ctx.channel.id)][str(ctx.author.id)] == item:
+                        item_picked = buttons.index(item)
+                        await customcommands(ctx, botmsg=botmsg, path=choices[item_picked])
+                        return
+                    if reactions[str(ctx.channel.id)][str(ctx.author.id)] == '❎':
+                        await customcommands(ctx, botmsg=botmsg, path='cancel')
+                        return
+            await asyncio.sleep(1)
+        await customcommands(ctx, 'timeout')
+
+        
+        
+        
 
 @bot.command(aliases=['set'])
 async def settings(ctx, arg=None, arg2=None):
+    permission_error = lambda arg, perm: f"Sorry, you need `{perm}` permission to access `{arg}` setting."
+    author_permissions = ctx.author.guild_permissions
     guild = ctx.guild
-    pf = set_prefix(guild_id=guild.id)
+    pf = settings.set_prefix(guild_id=guild.id)
 
     header = {'authorName': guild.name, 'authorIcon': guild.icon_url}
     title = 'Settings'
@@ -122,24 +182,21 @@ async def settings(ctx, arg=None, arg2=None):
         title = 'Settings > Prefix'
         description = f"Prefix for `{guild.id}`: `{pf}`"
         if arg2:
-            if len(arg2) > 2:
-                description=f"Prefix for `{guild.id}`: `{pf}`\nSorry! `{arg2}` is `{len(arg2) - 2}` character(s) too long."
+            if not author_permissions.manage_guild:
+                description = permission_error('prefix', 'Manage Server') # 'Guild' is 'Server' in Discord UX context
+                color = 16711680
+            elif len(arg2) > 2:
+                description += f"\nSorry! `{arg2}` is {plurality(len(arg2) - 2, 'character')} too long."
                 color = 16711680
             else:
-                prefix = set_prefix(guild_id=guild.id, mode='rw', prefix=arg2)
-                description = f"{description} > `{prefix}`"
+                prefix = settings.set_prefix(guild_id=guild.id, mode='rw', prefix=arg2)
+                description += f"> `{prefix}`\nBot prefix has been changed!"
+                color = 65280
 
     await action_embed(ctx, header, title=title, description=description, color=color)
 
-@settings.error
-async def settings_error(error, ctx):
-    if isinstance(error, MissingPermissions):
-        description = f"Sorry, {ctx.author}! You do not have permission to access settings"
-        color = 16711680
-        await action_embed(ctx, description=description, color=color)
-
-## To run the bot, you need to change the arguments inside bot.run with a string of your bot token, or try to
-## create a 'discord_token.json' file with the name and token inside the dictionary.
+## To run the bot, you need to change the arguments inside bot.run with a string of your bot token, or try to ##
+## create a 'discord_token.json' file with the name and token inside the dictionary.                          ##
 with open('discord_token.json') as discord_token:
     token = json.load(discord_token)
 bot.run(token["allysaqt"])
