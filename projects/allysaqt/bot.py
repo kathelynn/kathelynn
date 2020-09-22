@@ -23,6 +23,17 @@ async def action_embed(message, args=None, sendMessage=True, **kwargs):
         return await message.send(embed=embed)
     return embed
 
+def merge(source, destination): # note: in python 3.9, operator `|=` exists for dictionary.
+    for key, value in source.items():
+        if isinstance(value, dict):
+            # get node or create one
+            node = destination.setdefault(key, {})
+            merge(value, node)
+        else:
+            destination[key] = value
+
+    return destination
+
 ## For action embeds when multiple people are in ##
 def group(*args):
     args = ', '.join(list(*args[:len(*args)]))
@@ -33,15 +44,6 @@ def plurality(num, item):
     if num < 2:
         return f'{num} {item}'
     return f'{num} {item}s'
-
-def cleanup():
-    for x in reactions:
-        if x == {}:
-            print(reactions.pop(y))
-        else:
-            for y in x:
-                if y == []:
-                    print(reactions[x].pop(y))
 
 ##############
 ###COMMANDS###
@@ -58,10 +60,6 @@ async def on_ready():
     print(f'Logged on as {bot.user}!')
     channel = bot.get_channel(754172127019794513)
     await channel.send('I am awake~')
-
-    while True: # cleanup service
-        cleanup()
-        await asyncio.sleep(3600)    
     #while True:
     #    text = input('> ')
     #    if not text[0] == '#':
@@ -89,27 +87,22 @@ async def say(ctx, *args):
     if args == (): await ctx.send(message)
     else: await ctx.send(' '.join(args))
 
+reactions = {}
+
 @bot.event
 async def on_reaction_add(reaction, user):
-    global reactions
-    react = reaction.emoji
-    print(react)
-    channel_id = str(reaction.message.channel.id)
-    user_id = str(user.id)
-    insert = {channel_id: {user_id: react}}
-    reactions.update(insert) # note: in python 3.9, operator `|=` exists for dictionary.
-    print(reactions)
-    await asyncio.sleep(16)
-
-    reactions[channel_id][user_id].remove(react)
-    if reactions[channel_id][user_id] == []:
-        del reactions[channel_id][user_id]
-    if reactions[channel_id] == {}:
-        del reactions[channel_id]
-    #print(reactions[message.guild.id][message.channel.id].pop(message.id))
+    if reaction.message.author == bot.user: 
+        react = reaction.emoji
+        channel_id = str(reaction.message.channel.id)
+        user_id = str(user.id)
+        print(react)
+        dictionary = {str(channel_id): {str(user_id): react}}
+        merge(dictionary, reactions)
+        print(reactions)
+        #print(reactions[message.guild.id][message.channel.id].pop(message.id))
     
 @bot.command(aliases=['ccommands', 'cc'])
-async def customcommands(ctx, botmsg=None, path=0, end=False):
+async def customcommands(ctx, botmsg=None, path=None, end=False):
     guild = ctx.guild
     header = {'authorName': guild.name, 'authorIcon': guild.icon_url}
     title = 'Custom Commands'
@@ -126,45 +119,50 @@ async def customcommands(ctx, botmsg=None, path=0, end=False):
         color = 16711680
         end = True
 
-    if path == 0:
-        choices = ['a', 'b']
+    if not path:
+        choices = ['a0', 'b0']
         description = "Work in Progress\n`1.` Foo\n`2.` Bar"
         botmsg = await action_embed(ctx, header, title=title, description=description, color=color, footer=footer)
-    elif path[0] == 'a':
-        description = 'End'
-        end = True
-    elif path[0] == 'b':
-        description = "Work in progress\n`1.` Foobar\n`2.` Barfoo"
-        choices = ['ba', 'bb']
-        if path[1] == 'a':
-            description = "Foobar picked!"
-        if path[1] == 'b':
-            description = "Barfoo picked!"
 
-    if not path == 0:
-        await botmsg.edit(embed=action_embed(ctx, header, title=title, description=description, color=color, footer=footer))
+    if path:
+        if path[0] == 'a':
+            description = 'End'
+            end = True
+
+        elif path[0] == 'b':
+            description = "Work in progress\n`1.` Foobar\n`2.` Barfoo"
+            choices = ['ba', 'bb']
+            if path[1] == 'a':
+                description = "Foobar picked!"
+                end = True
+            if path[1] == 'b':
+                description = "Barfoo picked!"
+                end = True
+
+        await botmsg.edit(embed=await action_embed(ctx, header, sendMessage=False, title=title, description=description, color=color, footer=footer))
+
+    await botmsg.clear_reactions()
 
     if not end:
         for x in range(0, len(choices)):
             await botmsg.add_reaction(buttons[x])
         await botmsg.add_reaction('❎')
 
-        for x in range(0,15):
+        for x in range(0,120):
             if str(ctx.author.id) in reactions[str(ctx.channel.id)]:
                 for item in buttons:
                     if reactions[str(ctx.channel.id)][str(ctx.author.id)] == item:
                         item_picked = buttons.index(item)
-                        await customcommands(ctx, botmsg=botmsg, path=choices[item_picked])
+                        item_picked = choices[item_picked]
+                        del reactions[str(ctx.channel.id)][str(ctx.author.id)]
+                        await customcommands(ctx, botmsg=botmsg, path=item_picked)
                         return
                     if reactions[str(ctx.channel.id)][str(ctx.author.id)] == '❎':
                         await customcommands(ctx, botmsg=botmsg, path='cancel')
+                        del reactions[str(ctx.channel.id)][str(ctx.author.id)]
                         return
-            await asyncio.sleep(1)
+            await asyncio.sleep(.125)
         await customcommands(ctx, 'timeout')
-
-        
-        
-        
 
 @bot.command(aliases=['set'])
 async def settings(ctx, arg=None, arg2=None):
