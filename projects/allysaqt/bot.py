@@ -50,7 +50,7 @@ def plurality(num, item):
 ##############
 
 commands = discord.ext.commands
-bot = commands.Bot(command_prefix=settings.set_prefix)
+bot = commands.Bot(command_prefix=settings.prefix)
 
 @bot.event
 async def on_ready():
@@ -75,6 +75,23 @@ async def on_ready():
 async def on_message(message):
     print('{0.author} from {0.channel}: {0.content}'.format(message))
     await bot.process_commands(message)
+
+@bot.event
+async def on_command_error(ctx, error):
+    if isinstance(error, commands.CommandNotFound):
+        pf = await bot.get_prefix(ctx)
+        message_content = ctx.message.content[len(pf):]
+        try:
+            ccommand = ccommands.load(message_content, ctx=ctx)
+            if 'content' not in ccommand:
+                ccommand['content'] = None
+            if 'embed' not in ccommand:
+                ccommand['embed'] = None
+            await ctx.send(content=ccommand['content'], embed=ccommand['embed'])
+        except KeyError:
+            raise commands.CommandNotFound('Command does not exist!')
+        
+
 
 @bot.command(aliases=['hi'])
 async def hello(ctx): 
@@ -169,25 +186,25 @@ async def settings(ctx, arg=None, arg2=None):
     permission_error = lambda arg, perm: f"Sorry, you need `{perm}` permission to access `{arg}` setting."
     author_permissions = ctx.author.guild_permissions
     guild = ctx.guild
-    pf = settings.set_prefix(guild_id=guild.id)
+    prefix = settings.prefix(guild_id=guild.id)
 
     header = {'authorName': guild.name, 'authorIcon': guild.icon_url}
     title = 'Settings'
-    description = f"`prefix`: `{pf}`"
+    description = f"`prefix`: `{prefix}`"
     color = 2896440
 
     if arg == 'prefix':
         title = 'Settings > Prefix'
-        description = f"Prefix for `{guild.id}`: `{pf}`"
+        description = f"Prefix for `{guild.id}`: `{prefix}`"
         if arg2:
             if not author_permissions.manage_guild:
                 description = permission_error('prefix', 'Manage Server') # 'Guild' is 'Server' in Discord UX context
                 color = 16711680
-            elif len(arg2) > 2:
-                description += f"\nSorry! `{arg2}` is {plurality(len(arg2) - 2, 'character')} too long."
+            elif len(arg2) > 3:
+                description += f"\nSorry! `{arg2}` is {plurality(len(arg2) - 3, 'character')} too long."
                 color = 16711680
             else:
-                prefix = settings.set_prefix(guild_id=guild.id, mode='rw', prefix=arg2)
+                prefix = settings.prefix(guild_id=guild.id, mode='rw', prefix=arg2)
                 description += f"> `{prefix}`\nBot prefix has been changed!"
                 color = 65280
 
