@@ -1,7 +1,4 @@
-# pylint: disable=undefined-variable
-#: To be used for error checking
-def p(a):
-    print(a)
+#pylint: disable=undefined-variable
 
 #from dotenv import load_dotenv
 import importlib
@@ -212,6 +209,5 @@ async def settings(ctx, arg=None, arg2=None):
 
 ## To run the bot, you need to change the arguments inside bot.run with a string of your bot token, or try to ##
 ## create a 'discord_token.json' file with the name and token inside the dictionary.                          ##
-with open('discord_token.json') as discord_token:
-    token = json.load(discord_token)
+token = grabtoken()
 bot.run(token["allysaqt"])
