@@ -1,24 +1,10 @@
 #pylint: disable=undefined-variable
-
 #from dotenv import load_dotenv
 import importlib
 module_list = ['discord', 'discord.ext.commands', 'os', 'asyncio', 'json']
 for lib in module_list:
     globals()[lib] = importlib.import_module(lib)
 from modules import *
-
-## Embed module, to be used for making embeds with one line of code ##
-async def action_embed(message, args=None, sendMessage=True, **kwargs):
-    embed = discord.Embed(**kwargs)
-    if 'authorName' in args:
-        embed.set_author(name=args['authorName'])
-    if 'authorIcon' in args:
-        embed.set_author(name=args['authorName'], icon_url=args['authorIcon'])
-    if 'imageURL' in args:
-        embed.set_image(url=args['imageURL'])
-    if sendMessage:
-        return await message.send(embed=embed)
-    return embed
 
 def merge(source, destination): # note: in python 3.9, operator `|=` exists for dictionary.
     for key, value in source.items():
@@ -42,12 +28,12 @@ def plurality(num, item):
         return f'{num} {item}'
     return f'{num} {item}s'
 
-##############
+#############)
 ###COMMANDS###
 ##############
 
 commands = discord.ext.commands
-bot = commands.Bot(command_prefix=settings.prefix)
+bot = commands.Bot(command_prefix=settings.prefix)#command_prefix=settings.prefix)
 
 @bot.event
 async def on_ready():
@@ -77,13 +63,15 @@ async def on_message(message):
 async def on_command_error(ctx, error):
     if isinstance(error, commands.CommandNotFound):
         pf = await bot.get_prefix(ctx)
-        message_content = ctx.message.content[len(pf):]
+        message_content = ctx.message.content[len(pf):].split()
+        message_content[0] = message_content[0].lower()
         try:
-            ccommand = ccommands.load(message_content, ctx=ctx)
+            ccommand = ccommands.load(message_content[0], ctx=ctx)
             if 'content' not in ccommand:
                 ccommand['content'] = None
             if 'embed' not in ccommand:
                 ccommand['embed'] = None
+            if '{args}' in ccommand['content']: message_content = message_content.format(args=message_content)
             await ctx.send(content=ccommand['content'], embed=ccommand['embed'])
         except KeyError:
             raise commands.CommandNotFound('Command does not exist!')
@@ -110,8 +98,9 @@ async def on_reaction_add(reaction, user):
         channel_id = str(reaction.message.channel.id)
         user_id = str(user.id)
         print(react)
-        dictionary = {str(channel_id): {str(user_id): react}}
-        merge(dictionary, reactions)
+        #dictionary = {str(channel_id): {str(user_id): react}}
+        #merge(dictionary, reactions)
+        reactions[str(channel_id)][str(user_id)] = react
         print(reactions)
         #print(reactions[message.guild.id][message.channel.id].pop(message.id))
     
@@ -136,7 +125,7 @@ async def customcommands(ctx, botmsg=None, path=None, end=False):
     if not path:
         choices = ['a0', 'b0']
         description = "Work in Progress\n`1.` Foo\n`2.` Bar"
-        botmsg = await action_embed(ctx, header, title=title, description=description, color=color, footer=footer)
+        botmsg = await formatting.action_embed(ctx, header, title=title, description=description, color=color, footer=footer)
 
     if path:
         if path[0] == 'a':
@@ -153,7 +142,7 @@ async def customcommands(ctx, botmsg=None, path=None, end=False):
                 description = "Barfoo picked!"
                 end = True
 
-        await botmsg.edit(embed=await action_embed(ctx, header, sendMessage=False, title=title, description=description, color=color, footer=footer))
+        await botmsg.edit(embed=await formatting.action_embed(ctx, header, sendMessage=False, title=title, description=description, color=color, footer=footer))
 
     await botmsg.clear_reactions()
 
@@ -183,16 +172,16 @@ async def settings(ctx, arg=None, arg2=None):
     permission_error = lambda arg, perm: f"Sorry, you need `{perm}` permission to access `{arg}` setting."
     author_permissions = ctx.author.guild_permissions
     guild = ctx.guild
-    prefix = settings.prefix(guild_id=guild.id)
+    pf = settings.prefix(guild_id=guild.id)
 
     header = {'authorName': guild.name, 'authorIcon': guild.icon_url}
     title = 'Settings'
-    description = f"`prefix`: `{prefix}`"
+    description = f"`prefix`: `{pf}`"
     color = 2896440
 
     if arg == 'prefix':
         title = 'Settings > Prefix'
-        description = f"Prefix for `{guild.id}`: `{prefix}`"
+        description = f"Prefix for `{guild.id}`: `{pf}`"
         if arg2:
             if not author_permissions.manage_guild:
                 description = permission_error('prefix', 'Manage Server') # 'Guild' is 'Server' in Discord UX context
@@ -205,9 +194,10 @@ async def settings(ctx, arg=None, arg2=None):
                 description += f"> `{prefix}`\nBot prefix has been changed!"
                 color = 65280
 
-    await action_embed(ctx, header, title=title, description=description, color=color)
+    await formatting.action_embed(ctx, header, title=title, description=description, color=color)
 
 ## To run the bot, you need to change the arguments inside bot.run with a string of your bot token, or try to ##
 ## create a 'discord_token.json' file with the name and token inside the dictionary.                          ##
-token = grabtoken()
+#pylint: disable=used-before-assignment
+token = token.grabtoken()
 bot.run(token["allysaqt"])

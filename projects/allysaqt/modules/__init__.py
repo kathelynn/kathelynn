@@ -1,1 +1,1 @@
-__all__ = ["ccommands", "settings", "storagehandler", "token"]
+__all__ = ["ccommands", "formatting", "settings", "storagehandler", "token"]
