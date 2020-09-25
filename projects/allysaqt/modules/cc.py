@@ -1,19 +1,19 @@
 import discord
-from modules import storagehandler
+from modules import memoryhandler
 
 class CommandExists(Exception):
     pass
 
 def if_global(command):
     try:
-        storagehandler.store('global', mode='', category='commands', item=command, var=None)
+        memoryhandler.access(guild_id="global", mode='', category='commands', item=command, value=None)
         return True
     except KeyError:
         return False
     
 def if_local(command, guild_id=None):
     try:
-        storagehandler.store(guild_id, mode='rlocal', category='commands', item=command, var=None)
+        memoryhandler.access(guild_id=guild_id, mode='rlocal', category='commands', item=command, value=None)
         return True
     except KeyError:
         return False
@@ -34,9 +34,9 @@ def create(command, ctx=None, guild_id=None, **kwargs):
                 json[item] = kwargs[item]
             except: pass
     if not json == {}:
-        storagehandler.store(guild_id, mode='w-', category='commands', item=command, var=json)
+        memoryhandler.access(guild_id=guild_id, mode='w*', category='commands', item=command, value=json)
     else: raise TypeError('JSON cannot be empty')
 
-def load(command, ctx=None, guild_id=None, mode=''):
+def load(command, ctx=None, guild_id=None, mode='r'):
     if not guild_id: guild_id = ctx.guild.id
-    return storagehandler.store(guild_id, mode, category='commands', item=command)
+    return memoryhandler.access(guild_id=guild_id, mode=mode, category='commands', item=command)
