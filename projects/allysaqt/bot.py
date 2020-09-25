@@ -1,9 +1,10 @@
 #pylint: disable=undefined-variable
 #from dotenv import load_dotenv
 import importlib
-module_list = ['discord', 'discord.ext.commands', 'os', 'asyncio']
+module_list = ['asyncio', 'discord', 'discord.ext.commands', 'os']
 for lib in module_list:
     globals()[lib] = importlib.import_module(lib)
+from string import Template # gives module not found error if put on module list
 from modules import *
 
 ##############
@@ -41,26 +42,49 @@ async def on_message(message):
 async def on_command_error(ctx, error):
     if isinstance(error, commands.CommandNotFound):
         pf = await bot.get_prefix(ctx)
-        message_content = ctx.message.content[len(pf):].split()
-        message_content[0] = message_content[0].lower()
-        try:
-            ccommand = cc.load(message_content[0], ctx=ctx)
-            print(ccommand)
-            if 'content' not in ccommand:
-                ccommand['content'] = None
-            if 'embed' not in ccommand:
-                ccommand['embed'] = None
-            if '{args}' in ccommand['content']:
-                message_content = ' '.join(message_content[1:])
-                ccommand['content'] = ccommand['content'].format(args=message_content)
-            await ctx.send(content=ccommand['content'], embed=ccommand['embed'])
-        except KeyError:
-            raise commands.CommandNotFound('Command does not exist!')
+        content = ctx.message.content[len(pf):].split()
+        content[0] = content[0].lower()
+        #try:
+        aliases = memoryhandler.access(guild_id=ctx.guild.id, category='aliases', mode='*')
+        for key, value in aliases.items():
+            if content[0] in key:
+                content[0] = value
+        ccmd = cc.load(content[0], ctx=ctx)
 
-@bot.command(aliases=['hi'])
-async def hello(ctx): 
-    message = f'Hello, <@{ctx.author.id}> qtpi!'
-    await ctx.send(message)
+        format_author = f'<@{ctx.author.id}>'
+        format_author_avatarurl = ctx.author.avatar_url
+        format_mentions = ctx.message.raw_mentions
+        format_content = ' '.join(content[1:])
+        format_clean_content = ctx.message.clean_content
+
+        stringformatting = {
+            "author": format_author, "author_avatarurl": format_author_avatarurl, "mentions": format_mentions
+        }
+
+        def str_format(str_input):
+            str_input = Template(str_input)
+            return str_input.substitute (
+                author=format_author, author_avatarurl=format_author_avatarurl, mentions=format_mentions,
+                content=format_content, clean_content=format_clean_content
+            )
+
+        def dict_format(dictionary):
+            for key, value in dictionary.items():
+                if isinstance(value, dict):
+                    dictionary[key] = dict_format(value)
+                else:
+                    dictionary[key] = str_format(value)
+                    return dictionary
+
+        #embed = formatting.make_dict(title=title, description=description, color=color, author=author)
+        #embed = formatting.make_dict(embed=embed)
+        content, embed = formatting.json_embed(ccmd, )
+        if content: content = str_format(content)
+
+        await ctx.send(content=content, embed=embed)
+
+        #except KeyError:
+        #    raise commands.CommandNotFound('Command does not exist!')
 
 #@bot.command()
 #async def say(ctx, *args):
@@ -80,67 +104,71 @@ async def on_reaction_add(reaction, user):
         merge(dictionary, reactions)
     
 @bot.command(aliases=['ccommands', 'cc'])
-async def customcommands(ctx, botmsg=None, path=None, end=False):
-    guild = ctx.guild
-    header = {'authorName': guild.name, 'authorIcon': guild.icon_url}
-    title = 'Custom Commands'
-    footer = None
-    color = 800868
+async def customcommands(ctx, arg=None, path=None, botmsg=None):
+    choices = None
     buttons = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟']
 
-    if path == 'cancel':
+    guild = ctx.guild
+    author = {'name': guild.name, 'icon_url': str(guild.icon_url)}
+    description = "Test."
+    title = 'Custom Commands'
+    footer = discord.Embed.Empty
+    color = 800868
+
+    if arg == 'cancel':
         description = "Operation cancelled."
         color = 16711680
-        end = True
-    if path == 'timeout':
+    elif arg == 'timeout':
         description = "Timeout exceeded. Please try again"
         color = 16711680
-        end = True
 
-    if not path:
-        choices = ['a0', 'b0']
+    elif arg == 'create':
+        title = 'Custom Commands > Create'
         description = "Work in Progress\n`1.` Foo\n`2.` Bar"
-        botmsg = await formatting.action_embed(ctx, header, title=title, description=description, color=color, footer=footer)
+        choices = ['a', 'b0']
 
-    if path:
-        if path[0] == 'a':
-            description = 'End'
-            end = True
+        if path:
+            if path[0] == 'a':
+                description = 'End'
 
-        elif path[0] == 'b':
-            description = "Work in progress\n`1.` Foobar\n`2.` Barfoo"
-            choices = ['ba', 'bb']
-            if path[1] == 'a':
-                description = "Foobar picked!"
-                end = True
-            if path[1] == 'b':
-                description = "Barfoo picked!"
-                end = True
+            elif path[0] == 'b':
+                description = "Work in progress\n`1.` Foobar\n`2.` Barfoo"
+                choices = ['ba', 'bb']
+                if path[1] == 'a':
+                    description = "Foobar picked!"
+                if path[1] == 'b':
+                    description = "Barfoo picked!"
 
-        await botmsg.edit(embed=await formatting.action_embed(ctx, header, sendMessage=False, title=title, description=description, color=color, footer=footer))
+    embed = formatting.make_dict(title=title, description=description, color=color, footer=footer, author=author)
+    embed = formatting.make_dict(embed=embed)
+    content, embed = formatting.json_embed(embed)
 
-    await botmsg.clear_reactions()
+    if botmsg:
+        await botmsg.edit(content=content, embed=embed)
+        await botmsg.clear_reactions()
+    else:
+        await ctx.send(content=content, embed=embed)
 
-    if not end:
+    if choices:
         for x in range(0, len(choices)):
             await botmsg.add_reaction(buttons[x])
         await botmsg.add_reaction('❎')
 
         for x in range(0,120):
             if str(ctx.author.id) in reactions[str(ctx.channel.id)]:
-                for item in buttons:
-                    if reactions[str(ctx.channel.id)][str(ctx.author.id)] == item:
-                        item_picked = buttons.index(item)
-                        item_picked = choices[item_picked]
+                for button in buttons:
+                    if reactions[str(ctx.channel.id)][str(ctx.author.id)] == button:
+                        button_picked = buttons.index(button)
+                        button_picked = choices[button_picked]
                         del reactions[str(ctx.channel.id)][str(ctx.author.id)]
-                        await customcommands(ctx, botmsg=botmsg, path=item_picked)
+                        await customcommands(ctx, arg=arg, path=button_picked, botmsg=botmsg)
                         return
                     if reactions[str(ctx.channel.id)][str(ctx.author.id)] == '❎':
-                        await customcommands(ctx, botmsg=botmsg, path='cancel')
+                        await customcommands(ctx, arg='cancel', botmsg=botmsg)
                         del reactions[str(ctx.channel.id)][str(ctx.author.id)]
                         return
             await asyncio.sleep(.125)
-        await customcommands(ctx, 'timeout')
+        await customcommands(ctx, arg, 'timeout')
 
 @bot.command(aliases=['setting', 'set'])
 async def settings(ctx, arg=None, arg2=None):
@@ -149,7 +177,7 @@ async def settings(ctx, arg=None, arg2=None):
     guild = ctx.guild
     pf = setting.prefix(guild_id=guild.id)
 
-    header = {'authorName': guild.name, 'authorIcon': guild.icon_url}
+    author = {'name': guild.name, 'icon_url': str(guild.icon_url)}
     title = 'Settings'
     description = f"`prefix`: `{pf}`"
     color = 2896440
@@ -169,7 +197,10 @@ async def settings(ctx, arg=None, arg2=None):
                 description += f"> `{prefix}`\nBot prefix has been changed!"
                 color = 65280
 
-    await formatting.action_embed(ctx, header, title=title, description=description, color=color)
+    embed = formatting.make_dict(title=title, description=description, color=color, author=author)
+    embed = formatting.make_dict(embed=embed)
+    content, embed = formatting.json_embed(embed)
+    await ctx.send(content=content, embed=embed)
 
 ## To run the bot, you need to change the arguments inside bot.run with a string of your bot token, or try to ##
 ## create a 'discord_token.json' file with the name and token inside the dictionary.                          ##

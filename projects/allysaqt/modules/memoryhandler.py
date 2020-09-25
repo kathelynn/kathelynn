@@ -2,7 +2,6 @@ import json
 from modules import formatting
 filename = 'allysaqt.json'
 
-
 def loadfile(file):
     try:
         with open(file) as file:
@@ -14,23 +13,29 @@ def loadfile(file):
 memory = loadfile(filename)
 
 def access(guild_id=None, category=None, item=None, value=None, mode=''):
-    try: memory
-    except NameError: memory = loadfile(filename)
 
     if isinstance(guild_id, int):
         guild_id = str(guild_id)
-    
+
     if 'w' in mode:
         with open(filename, 'w') as file:
             newdict = {guild_id: {category: {item: value}}}
             formatting.merge_dict(newdict, memory)
-            json.dump(memory, file)
+            json.dump(memory, file, indent=4)
         
     local_only = False
     if 'local' in mode:
         local_only = True
 
-    #if '*' in mode: return memory
+    if '*' in mode: 
+        try:
+            memory[guild_id][category]
+            return memory[guild_id][category]
+        except KeyError:
+            if not local_only:
+                return memory["global"][category]
+            raise KeyError(f'{category} does not exist')
+
     elif '-' not in mode:
         try:
             memory[guild_id][category][item]
