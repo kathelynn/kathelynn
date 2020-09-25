@@ -58,30 +58,13 @@ async def on_command_error(ctx, error):
         format_clean_content = ctx.message.clean_content
 
         stringformatting = {
-            "author": format_author, "author_avatarurl": format_author_avatarurl, "mentions": format_mentions
+            "author": format_author, "author_avatarurl": format_author_avatarurl, "mentions": format_mentions,
+            "content": format_content, "clean_content": format_clean_content
         }
-
-        def str_format(str_input):
-            str_input = Template(str_input)
-            return str_input.substitute (
-                author=format_author, author_avatarurl=format_author_avatarurl, mentions=format_mentions,
-                content=format_content, clean_content=format_clean_content
-            )
-
-        def dict_format(dictionary):
-            for key, value in dictionary.items():
-                if isinstance(value, dict):
-                    dictionary[key] = dict_format(value)
-                else:
-                    dictionary[key] = str_format(value)
-                    return dictionary
 
         #embed = formatting.make_dict(title=title, description=description, color=color, author=author)
         #embed = formatting.make_dict(embed=embed)
-        content, embed = formatting.json_embed(ccmd, )
-        if content: content = str_format(content)
-
-        await ctx.send(content=content, embed=embed)
+        await ctx.send(**formatting.json_embed(ccmd, stringformatting))
 
         #except KeyError:
         #    raise commands.CommandNotFound('Command does not exist!')

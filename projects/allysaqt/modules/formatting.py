@@ -1,13 +1,27 @@
 ## Embed module, to be used for making embeds with one line of code ##
 import discord
+from string import Template
 
-def json_embed(json): # translates stuff made from embed visualizer!
+def str_format(str_input, stringformat):
+    str_input = Template(str_input)
+    return str_input.substitute(**stringformat)
 
+def dict_format(dictionary, stringformat):
+    for key, value in dictionary.items():
+        if isinstance(value, dict):
+            dictionary[key] = dict_format(value, stringformat)
+        else:
+            dictionary[key] = Template(value)
+            dictionary[key] = dictionary[key].substitute(**stringformat)
+    return dictionary
+
+def json_embed(json, stringformat=None): # translates stuff made from embed visualizer!
+    json = dict_format(json, stringformat)
+    Empty = discord.Embed.Empty
     if not 'content' in json: json['content'] = None
 
     set_embed = None
     if 'embed' in json:
-        Empty = discord.Embed.Empty
         embeddicts = {}
         embedkwargs = {
             "title": Empty, "description": Empty, "url": Empty, "color": Empty, "timestamp": Empty
@@ -48,7 +62,7 @@ def json_embed(json): # translates stuff made from embed visualizer!
                             dictionary['inline'] = False
                         set_embed.add_field(name=dictionary['name'], value=dictionary['value'], inline=dictionary['inline'])
 
-    return (json['content'], set_embed)
+    return {"content":json['content'], "embed":set_embed}
 
 #async def action_embed(message, args={}, fields=[], sendMessage=True, **kwargs):
 #    embed = discord.Embed(**kwargs)
