@@ -16,7 +16,9 @@ def dict_format(dictionary, stringformat):
     return dictionary
 
 def json_embed(json, stringformat=None): # translates stuff made from embed visualizer!
-    json = dict_format(json, stringformat)
+    json = json.copy()
+    if stringformat:
+        json = dict_format(json, stringformat)
     Empty = discord.Embed.Empty
     if not 'content' in json: json['content'] = None
 
@@ -56,7 +58,9 @@ def json_embed(json, stringformat=None): # translates stuff made from embed visu
                         name=embeddicts['author']['name'], url=embeddicts['author']['url'], icon_url=embeddicts['author']['icon_url']
                         )
             elif key == 'fields':
+                print(value)
                 if isinstance(value, list) and isinstance(value[0], dict):
+                    print(True)
                     for dictionary in value:
                         if 'inline' not in dictionary:
                             dictionary['inline'] = False

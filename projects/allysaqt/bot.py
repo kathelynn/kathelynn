@@ -1,9 +1,8 @@
-#pylint: disable=undefined-variable
 #from dotenv import load_dotenv
-import importlib
-module_list = ['asyncio', 'discord', 'discord.ext.commands', 'os']
-for lib in module_list:
-    globals()[lib] = importlib.import_module(lib)
+import asyncio
+import discord
+from discord.ext import commands
+import os
 from string import Template # gives module not found error if put on module list
 from modules import *
 
@@ -12,7 +11,8 @@ from modules import *
 ##############
 
 commands = discord.ext.commands
-bot = commands.Bot(command_prefix=setting.prefix)
+bot = commands.Bot(command_prefix=settingshandler.prefix)
+Empty = discord.Embed.Empty
 
 @bot.event
 async def on_ready():
@@ -44,30 +44,33 @@ async def on_command_error(ctx, error):
         pf = await bot.get_prefix(ctx)
         content = ctx.message.content[len(pf):].split()
         content[0] = content[0].lower()
-        #try:
-        aliases = memoryhandler.access(guild_id=ctx.guild.id, category='aliases', mode='*')
-        for key, value in aliases.items():
-            if content[0] in key:
-                content[0] = value
-        ccmd = cc.load(content[0], ctx=ctx)
+        try:
+            aliases = memoryhandler.access(guild_id=ctx.guild.id, category='aliases', mode='*')
+            for key, value in aliases.items():
+                if content[0] in key:
+                    content[0] = value
+            ccmd = ccmdhandler.load(content[0], ctx=ctx)
 
-        format_author = f'<@{ctx.author.id}>'
-        format_author_avatarurl = ctx.author.avatar_url
-        format_mentions = ctx.message.raw_mentions
-        format_content = ' '.join(content[1:])
-        format_clean_content = ctx.message.clean_content
+            format_author = f'<@{ctx.author.id}>'
+            format_author_avatarurl = ctx.author.avatar_url
+            format_mentions = ctx.message.raw_mentions
+            format_content = ' '.join(content[1:])
+            format_clean_content = ctx.message.clean_content
 
-        stringformatting = {
-            "author": format_author, "author_avatarurl": format_author_avatarurl, "mentions": format_mentions,
-            "content": format_content, "clean_content": format_clean_content
-        }
+            stringformatting = {
+                "author": format_author, "author_avatarurl": format_author_avatarurl, "mentions": format_mentions,
+                "content": format_content, "clean_content": format_clean_content
+            }
 
-        #embed = formatting.make_dict(title=title, description=description, color=color, author=author)
-        #embed = formatting.make_dict(embed=embed)
-        await ctx.send(**formatting.json_embed(ccmd, stringformatting))
+            await ctx.send(**formatting.json_embed(ccmd, stringformatting))
 
-        #except KeyError:
-        #    raise commands.CommandNotFound('Command does not exist!')
+   
+        except KeyError:
+            raise commands.CommandNotFound('Command does not exist!')
+    
+    if isinstance(error, discord.errors.Forbidden):
+        ctx.author.send("Sorry! I currently don't have the permissions required to do that.")
+
 
 #@bot.command()
 #async def say(ctx, *args):
@@ -90,12 +93,13 @@ async def on_reaction_add(reaction, user):
 async def customcommands(ctx, arg=None, path=None, botmsg=None):
     choices = None
     buttons = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟']
-
     guild = ctx.guild
+    pf = settingshandler.prefix(guild_id=guild.id)
+
     author = {'name': guild.name, 'icon_url': str(guild.icon_url)}
-    description = "Test."
+    fields = [{'name': f'`{pf}create', 'value':'Initialize embed creation tool'}]
     title = 'Custom Commands'
-    footer = discord.Embed.Empty
+    footer = Empty
     color = 800868
 
     if arg == 'cancel':
@@ -121,16 +125,17 @@ async def customcommands(ctx, arg=None, path=None, botmsg=None):
                     description = "Foobar picked!"
                 if path[1] == 'b':
                     description = "Barfoo picked!"
+    
+    if description:
+        fields=Empty
 
-    embed = formatting.make_dict(title=title, description=description, color=color, footer=footer, author=author)
-    embed = formatting.make_dict(embed=embed)
-    content, embed = formatting.json_embed(embed)
+    embed = formatting.make_dict(embed={"title": title, "description":description, "color": color, "footer": footer, "author": author, "fields":fields})
 
     if botmsg:
-        await botmsg.edit(content=content, embed=embed)
+        await botmsg.edit(**formatting.json_embed(embed))
         await botmsg.clear_reactions()
     else:
-        await ctx.send(content=content, embed=embed)
+        await ctx.send(**formatting.json_embed(embed))
 
     if choices:
         for x in range(0, len(choices)):
@@ -158,7 +163,7 @@ async def settings(ctx, arg=None, arg2=None):
     permission_error = lambda arg, perm: f"Sorry, you need `{perm}` permission to access `{arg}` setting."
     author_permissions = ctx.author.guild_permissions
     guild = ctx.guild
-    pf = setting.prefix(guild_id=guild.id)
+    pf = settingshandler.prefix(guild_id=guild.id)
 
     author = {'name': guild.name, 'icon_url': str(guild.icon_url)}
     title = 'Settings'
@@ -176,14 +181,12 @@ async def settings(ctx, arg=None, arg2=None):
                 description += f"\nSorry! `{arg2}` is {formatting.plurality(len(arg2) - 3, 'character')} too long."
                 color = 16711680
             else:
-                prefix = setting.prefix(guild_id=guild.id, mode='rw', prefix=arg2)
+                prefix = settingshandler.prefix(guild_id=guild.id, mode='rw', prefix=arg2)
                 description += f"> `{prefix}`\nBot prefix has been changed!"
                 color = 65280
 
-    embed = formatting.make_dict(title=title, description=description, color=color, author=author)
-    embed = formatting.make_dict(embed=embed)
-    content, embed = formatting.json_embed(embed)
-    await ctx.send(content=content, embed=embed)
+    embed = formatting.make_dict(embed={"title": title, "description": description, "color": color, "author": author})
+    await ctx.send(**formatting.json_embed(embed))
 
 ## To run the bot, you need to change the arguments inside bot.run with a string of your bot token, or try to ##
 ## create a 'discord_token.json' file with the name and token inside the dictionary.                          ##
