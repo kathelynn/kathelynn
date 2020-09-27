@@ -24,14 +24,15 @@ async def on_message(message):
 
 @BOT.event
 async def on_reaction_add(reaction, user):
+    '''Runs when a reaction gets added'''
     if reaction.message.author == BOT.user:
         react = reaction.emoji
         channel_id = str(reaction.message.channel.id)
         user_id = str(user.id)
         dictionary = {str(channel_id): {str(user_id): react}}
-        merge(dictionary, reactions)
+        modules.formatting.merge_dict(dictionary, REACTIONS)
 
-@bot.command(aliases=['ccommands', 'cc'])
+@BOT.command(aliases=['ccommands', 'cc'])
 async def customcommands(ctx, arg=None, path=None, botmsg=None):
     '''Custom commands command'''
     choices = None
