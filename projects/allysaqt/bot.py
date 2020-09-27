@@ -20,7 +20,7 @@ async def on_ready():
     reactions = {}
 
     print(f'Logged on as {bot.user}!')
-    channel = bot.get_channel(754172127019794513)
+    channel = bot.get_channel(598967091978174477)
     await channel.send('I am awake~')
     #while True:
     #    text = input('> ')
