@@ -1,52 +1,57 @@
+'''Memoryhandler'''
 import json
-from modules import formatting
-filename = 'allysaqt.json'
+from . import formatting
+FILENAME = 'allysaqt.json'
 
 def loadfile(file):
+    '''Loads the file'''
     try:
-        with open(file) as file:
+        with open(file) as handle:
             print('Disk read!')
-            return json.load(file)
+            return json.load(handle)
     except FileNotFoundError:
         print("If you'd like to run this bot, please follow the instructions found in README.md")
 
-memory = loadfile(filename)
+MEMORY = loadfile(FILENAME)
 
 def access(guild_id=None, category=None, item=None, value=None, mode=''):
-
+    '''???'''
     if isinstance(guild_id, int):
         guild_id = str(guild_id)
 
     if 'w' in mode:
-        with open(filename, 'w') as file:
+        with open(FILENAME, 'w') as file:
             newdict = {guild_id: {category: {item: value}}}
-            formatting.merge_dict(newdict, memory)
-            json.dump(memory, file, indent=4)
-        
+            formatting.merge_dict(newdict, MEMORY)
+            json.dump(MEMORY, file, indent=4)
+
     local_only = False
     if 'local' in mode:
         local_only = True
 
-    if '*' in mode: 
+    if '*' in mode:
         try:
-            memory[guild_id][category]
-            return memory[guild_id][category]
+            # TODO: rewrite to if statements
+            MEMORY[guild_id][category]
+            return MEMORY[guild_id][category]
         except KeyError:
             if not local_only:
-                return memory["global"][category]
+                return MEMORY["global"][category]
             raise KeyError(f'{category} does not exist')
 
     elif '-' not in mode:
+        # TODO: rewrite to if statements
         try:
-            memory[guild_id][category][item]
-            return memory[guild_id][category][item]
+            MEMORY[guild_id][category][item]
+            return MEMORY[guild_id][category][item]
         except KeyError:
             if value:
                 return value
             if not local_only:
-                return memory["global"][category][item]
+                return MEMORY["global"][category][item]
             raise KeyError("No default value was set!")
 
 def grabtoken():
+    '''Gets the token'''
     with open('discord_token.json') as discord_token:
         return json.load(discord_token)

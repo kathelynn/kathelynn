@@ -1,105 +1,49 @@
-#from dotenv import load_dotenv
+'''Aly is a qt'''
 import asyncio
 import discord
 from discord.ext import commands
-import os
-from string import Template # gives module not found error if put on module list
-from modules import *
+import modules
 
-##############
-###COMMANDS###
-##############
+# COMMANDS
 
-commands = discord.ext.commands
-bot = commands.Bot(command_prefix=settingshandler.prefix)
-Empty = discord.Embed.Empty
+BOT = commands.Bot(command_prefix=modules.settingshandler.prefix)
+REACTIONS = {}
 
-@bot.event
+@BOT.event
 async def on_ready():
-    global reactions
-    reactions = {}
-
-    print(f'Logged on as {bot.user}!')
-    channel = bot.get_channel(754172127019794513)
+    '''Runs when the bot connects to discord'''
+    print(f'Logged on as {BOT.user}!')
+    channel = BOT.get_channel(598967091978174477)
     await channel.send('I am awake~')
-    #while True:
-    #    text = input('> ')
-    #    if not text[0] == '#':
-    #        await channel.send(text)
-    #    else:
-    #        for guild in client.guilds:
-    #            channel = discord.utils.get(guild.text_channels, name=text[1:])
-    #            if channel == None:
-    #                print('Channel does not exist')
-    #            else: print(f"Moved to #{channel.name} in '{channel.guild}'")
 
-@bot.event
+@BOT.event
 async def on_message(message):
+    '''Runs when we get a message to log it'''
     print('{0.author} from {0.channel}: {0.content}'.format(message))
-    await bot.process_commands(message)
+    await BOT.process_commands(message)
 
-@bot.event
-async def on_command_error(ctx, error):
-    if isinstance(error, commands.CommandNotFound):
-        pf = await bot.get_prefix(ctx)
-        content = ctx.message.content[len(pf):].split()
-        content[0] = content[0].lower()
-        try:
-            aliases = memoryhandler.access(guild_id=ctx.guild.id, category='aliases', mode='*')
-            for key, value in aliases.items():
-                if content[0] in key:
-                    content[0] = value
-            ccmd = ccmdhandler.load(content[0], ctx=ctx)
-
-            format_author = f'<@{ctx.author.id}>'
-            format_author_avatarurl = ctx.author.avatar_url
-            format_mentions = ctx.message.raw_mentions
-            format_content = ' '.join(content[1:])
-            format_clean_content = ctx.message.clean_content
-
-            stringformatting = {
-                "author": format_author, "author_avatarurl": format_author_avatarurl, "mentions": format_mentions,
-                "content": format_content, "clean_content": format_clean_content
-            }
-
-            await ctx.send(**formatting.json_embed(ccmd, stringformatting))
-
-   
-        except KeyError:
-            raise commands.CommandNotFound('Command does not exist!')
-    
-    if isinstance(error, discord.errors.Forbidden):
-        ctx.author.send("Sorry! I currently don't have the permissions required to do that.")
-
-
-#@bot.command()
-#async def say(ctx, *args):
-#    message = 'What should I say, qtpi?'
-#    if args == (): await ctx.send(message)
-#    else: await ctx.send(' '.join(args))
-
-reactions = {}
-
-@bot.event
+@BOT.event
 async def on_reaction_add(reaction, user):
-    if reaction.message.author == bot.user: 
+    '''Runs when a reaction gets added'''
+    if reaction.message.author == BOT.user:
         react = reaction.emoji
         channel_id = str(reaction.message.channel.id)
         user_id = str(user.id)
         dictionary = {str(channel_id): {str(user_id): react}}
-        merge(dictionary, reactions)
-    
-@bot.command(aliases=['ccommands', 'cc'])
+        modules.formatting.merge_dict(dictionary, REACTIONS)
+
+@BOT.command(aliases=['ccommands', 'cc'])
 async def customcommands(ctx, arg=None, path=None, botmsg=None):
+    '''Custom commands command'''
     choices = None
     buttons = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟']
     guild = ctx.guild
-    pf = settingshandler.prefix(guild_id=guild.id)
+    prefix = modules.settingshandler.prefix(guild_id=guild.id)
 
     author = {'name': guild.name, 'icon_url': str(guild.icon_url)}
-    fields = [{'name': f'`{pf}create', 'value':'Initialize embed creation tool'}]
+    fields = [{'name': f'`{prefix}create', 'value':'Initialize embed creation tool'}]
     title = 'Custom Commands'
-    footer = Empty
+    footer = discord.Embed.Empty
     color = 800868
 
     if arg == 'cancel':
@@ -125,70 +69,76 @@ async def customcommands(ctx, arg=None, path=None, botmsg=None):
                     description = "Foobar picked!"
                 if path[1] == 'b':
                     description = "Barfoo picked!"
-    
-    if description:
-        fields=Empty
 
-    embed = formatting.make_dict(embed={"title": title, "description":description, "color": color, "footer": footer, "author": author, "fields":fields})
+    if description:
+        fields=discord.Embed.Empty
+
+    embed = modules.formatting.make_dict(embed={"title": title, "description":description,
+                                                "color": color, "footer": footer,
+                                                "author": author, "fields":fields})
 
     if botmsg:
-        await botmsg.edit(**formatting.json_embed(embed))
+        await botmsg.edit(**modules.formatting.json_embed(embed))
         await botmsg.clear_reactions()
     else:
-        await ctx.send(**formatting.json_embed(embed))
+        await ctx.send(**modules.formatting.json_embed(embed))
 
     if choices:
-        for x in range(0, len(choices)):
-            await botmsg.add_reaction(buttons[x])
+        for i in range(0, len(choices)):
+            await botmsg.add_reaction(buttons[i])
         await botmsg.add_reaction('❎')
 
-        for x in range(0,120):
-            if str(ctx.author.id) in reactions[str(ctx.channel.id)]:
+        for i in range(0,120):
+            if str(ctx.author.id) in REACTIONS[str(ctx.channel.id)]:
                 for button in buttons:
-                    if reactions[str(ctx.channel.id)][str(ctx.author.id)] == button:
+                    if REACTIONS[str(ctx.channel.id)][str(ctx.author.id)] == button:
                         button_picked = buttons.index(button)
                         button_picked = choices[button_picked]
-                        del reactions[str(ctx.channel.id)][str(ctx.author.id)]
+                        del REACTIONS[str(ctx.channel.id)][str(ctx.author.id)]
                         await customcommands(ctx, arg=arg, path=button_picked, botmsg=botmsg)
                         return
-                    if reactions[str(ctx.channel.id)][str(ctx.author.id)] == '❎':
+                    if REACTIONS[str(ctx.channel.id)][str(ctx.author.id)] == '❎':
                         await customcommands(ctx, arg='cancel', botmsg=botmsg)
-                        del reactions[str(ctx.channel.id)][str(ctx.author.id)]
+                        del REACTIONS[str(ctx.channel.id)][str(ctx.author.id)]
                         return
             await asyncio.sleep(.125)
         await customcommands(ctx, arg, 'timeout')
 
-@bot.command(aliases=['setting', 'set'])
+@BOT.command(aliases=['setting', 'set'])
 async def settings(ctx, arg=None, arg2=None):
+    '''Settings command'''
     permission_error = lambda arg, perm: f"Sorry, you need `{perm}` permission to access `{arg}` setting."
     author_permissions = ctx.author.guild_permissions
     guild = ctx.guild
-    pf = settingshandler.prefix(guild_id=guild.id)
+    prefix = modules.settingshandler.prefix(guild_id=guild.id)
 
     author = {'name': guild.name, 'icon_url': str(guild.icon_url)}
     title = 'Settings'
-    description = f"`prefix`: `{pf}`"
+    description = f"`prefix`: `{prefix}`"
     color = 2896440
 
     if arg == 'prefix':
         title = 'Settings > Prefix'
-        description = f"Prefix for `{guild.id}`: `{pf}`"
+        description = f"Prefix for `{guild.id}`: `{prefix}`"
         if arg2:
             if not author_permissions.manage_guild:
-                description = permission_error('prefix', 'Manage Server') # 'Guild' is 'Server' in Discord UX context
+                # 'Guild' is 'Server' in Discord UX context
+                description = permission_error('prefix', 'Manage Server')
                 color = 16711680
             elif len(arg2) > 3:
-                description += f"\nSorry! `{arg2}` is {formatting.plurality(len(arg2) - 3, 'character')} too long."
+                description += f"\nSorry! `{arg2}` is {modules.formatting.plurality(len(arg2) - 3, 'character')} too long."
                 color = 16711680
             else:
-                prefix = settingshandler.prefix(guild_id=guild.id, mode='rw', prefix=arg2)
+                prefix = modules.settingshandler.prefix(guild_id=guild.id, mode='rw', prefix=arg2)
                 description += f"> `{prefix}`\nBot prefix has been changed!"
                 color = 65280
 
-    embed = formatting.make_dict(embed={"title": title, "description": description, "color": color, "author": author})
-    await ctx.send(**formatting.json_embed(embed))
+    embed = modules.formatting.make_dict(embed={"title": title, "description": description,
+                                                "color": color, "author": author})
+    await ctx.send(**modules.formatting.json_embed(embed))
 
-## To run the bot, you need to change the arguments inside bot.run with a string of your bot token, or try to ##
-## create a 'discord_token.json' file with the name and token inside the dictionary.                          ##
-token = memoryhandler.grabtoken()
-bot.run(token["allysaqt"])
+# To run the bot, you need to change the arguments inside bot.run
+# with a string of your bot token, or try to ##
+# create a 'discord_token.json' file with the name and token inside the dictionary.
+TOKEN = modules.memoryhandler.grabtoken()
+BOT.run(TOKEN["allysaqt"])
