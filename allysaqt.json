@@ -1,0 +1,17 @@
+{
+    "global": {
+        "settings": {
+            "prefix": "a$"
+        },
+        "commands": {
+            "ping": {
+                "content": "Pong!"
+            }
+        }
+    },
+    "692647317425094686": {
+        "settings": {
+            "prefix": "a$"
+        }
+    }
+}

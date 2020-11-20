@@ -1,4 +1,4 @@
-'''Aly is a qt'''
+'''Ally is a qt'''
 import asyncio
 import discord
 from discord.ext import commands
@@ -12,9 +12,9 @@ REACTIONS = {}
 @BOT.event
 async def on_ready():
     '''Runs when the bot connects to discord'''
-    print(f'Logged on as {BOT.user}!')
-    channel = BOT.get_channel(598967091978174477)
-    await channel.send('I am awake~')
+#    print(f'Logged on as {BOT.user}!')
+#    channel = BOT.get_channel(598967091978174477)
+#    await channel.send('I am awake~')
 
 @BOT.event
 async def on_message(message):
@@ -22,18 +22,39 @@ async def on_message(message):
     print('{0.author} from {0.channel}: {0.content}'.format(message))
     await BOT.process_commands(message)
 
+async def ccommand(message):
+    print(message.content[len(message.prefix):])
+
 @BOT.event
 async def on_reaction_add(reaction, user):
     '''Runs when a reaction gets added'''
     if reaction.message.author == BOT.user:
-        react = reaction.emoji
-        channel_id = str(reaction.message.channel.id)
-        user_id = str(user.id)
-        dictionary = {str(channel_id): {str(user_id): react}}
+        dictionary = {str(reaction.message.channel.id): {str(user.id): reaction.emoji}}
         modules.formatting.merge_dict(dictionary, REACTIONS)
+        await asyncio.sleep(30)
+        del REACTIONS[str(reaction.message.channel.id)][str(user.id)]
+
+async def interactive_reaction(ctx, message, buttons):
+    '''Makes reactions on messages interactive'''
+    for i in range(0, len(buttons)):
+        await message.add_reaction(buttons[i])
+    await message.add_reaction('❎')
+
+    channel_reactions = REACTIONS[str(ctx.channel.id)]
+    for i in range(0,240):
+        if str(ctx.author.id) in channel_reactions:
+            if channel_reactions[str(ctx.author.id)] in buttons:
+                reaction = buttons.index(channel_reactions[str(ctx.author.id)])
+                del REACTIONS[str(ctx.channel.id)][str(ctx.author.id)]
+                return reaction
+            if REACTIONS[str(ctx.channel.id)][str(ctx.author.id)] == '❎':
+                del REACTIONS[str(ctx.channel.id)][str(ctx.author.id)]
+                return 'cancel'
+        await asyncio.sleep(.125)
+    return 'timeout'
 
 @BOT.command(aliases=['ccommands', 'cc'])
-async def customcommands(ctx, arg=None, path=None, botmsg=None):
+async def customcommands(ctx, arg=None, path='00', botmsg=None):
     '''Custom commands command'''
     choices = None
     buttons = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟']
@@ -41,68 +62,64 @@ async def customcommands(ctx, arg=None, path=None, botmsg=None):
     prefix = modules.settingshandler.prefix(guild_id=guild.id)
 
     author = {'name': guild.name, 'icon_url': str(guild.icon_url)}
-    fields = [{'name': f'`{prefix}create', 'value':'Initialize embed creation tool'}]
     title = 'Custom Commands'
-    footer = discord.Embed.Empty
+    description = None
+    fields = None
+    footer = None
     color = 800868
 
-    if arg == 'cancel':
-        description = "Operation cancelled."
-        color = 16711680
-    elif arg == 'timeout':
-        description = "Timeout exceeded. Please try again"
-        color = 16711680
-
-    elif arg == 'create':
+    if not arg:
+        fields = [{'name': f'{prefix}customommands create`', 'value':'Initialize embed creation tool'}]
+    if arg == 'create':
         title = 'Custom Commands > Create'
         description = "Work in Progress\n`1.` Foo\n`2.` Bar"
         choices = ['a', 'b0']
 
-        if path:
-            if path[0] == 'a':
-                description = 'End'
+        if path == 'cancel':
+            description = 'Operation cancelled.'
+            color = 16711680
+            end = True
+        if path == 'timeout':
+            description = 'Timeout exceeded. Please try again'
+            color = 16711680
+        if path[0] == 'a':
+            description = 'End'
+            end = True
+        elif path[0] == 'b':
+            description = "Work in progress\n`1.` Foobar\n`2.` Barfoo"
+            choices = ['ba', 'bb']
+            if path[1] == 'a':
+                description = "Foobar picked!"
+            if path[1] == 'b':
+                description = "Barfoo picked!"
 
-            elif path[0] == 'b':
-                description = "Work in progress\n`1.` Foobar\n`2.` Barfoo"
-                choices = ['ba', 'bb']
-                if path[1] == 'a':
-                    description = "Foobar picked!"
-                if path[1] == 'b':
-                    description = "Barfoo picked!"
-
-    if description:
-        fields=discord.Embed.Empty
-
-    embed = modules.formatting.make_dict(embed={"title": title, "description":description,
+    embed_JSON = {}    
+    for embed in ['title', 'description', 'color', 'footer', 'author', 'fields']:
+        value = locals()[embed]
+        if value:
+            embed_JSON[embed] = value
+        
+    embed = discord.Embed.from_dict({"title": title, "description":description,
                                                 "color": color, "footer": footer,
                                                 "author": author, "fields":fields})
 
     if botmsg:
-        await botmsg.edit(**modules.formatting.json_embed(embed))
+        #await botmsg.edit(**modules.formatting.json_embed(embed))
         await botmsg.clear_reactions()
+        await botmsg.edit(embed=embed)
     else:
-        await ctx.send(**modules.formatting.json_embed(embed))
+        botmsg = await ctx.send(embed=embed)
+        #await ctx.send(**modules.formatting.json_embed(embed))
 
-    if choices:
-        for i in range(0, len(choices)):
-            await botmsg.add_reaction(buttons[i])
-        await botmsg.add_reaction('❎')
-
-        for i in range(0,120):
-            if str(ctx.author.id) in REACTIONS[str(ctx.channel.id)]:
-                for button in buttons:
-                    if REACTIONS[str(ctx.channel.id)][str(ctx.author.id)] == button:
-                        button_picked = buttons.index(button)
-                        button_picked = choices[button_picked]
-                        del REACTIONS[str(ctx.channel.id)][str(ctx.author.id)]
-                        await customcommands(ctx, arg=arg, path=button_picked, botmsg=botmsg)
-                        return
-                    if REACTIONS[str(ctx.channel.id)][str(ctx.author.id)] == '❎':
-                        await customcommands(ctx, arg='cancel', botmsg=botmsg)
-                        del REACTIONS[str(ctx.channel.id)][str(ctx.author.id)]
-                        return
-            await asyncio.sleep(.125)
-        await customcommands(ctx, arg, 'timeout')
+    try: 
+        if path in choices:
+            return
+    except TypeError: return
+    if choices or not end:
+        path_result = await interactive_reaction(ctx, botmsg, buttons[:len(choices)])
+        if isinstance(path_result, int):
+            path_result = choices[path_result]
+        await customcommands(ctx, arg=arg, path=path_result, botmsg=botmsg)
 
 @BOT.command(aliases=['setting', 'set'])
 async def settings(ctx, arg=None, arg2=None):
