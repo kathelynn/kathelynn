@@ -1,4 +1,4 @@
-'''Embed module, to be used for making embeds with one line of code'''
+'''Formatting'''
 from string import Template
 import discord
 
@@ -76,7 +76,6 @@ def json_embed(json, stringformat=None): # translates stuff made from embed visu
                         set_embed.add_field(name=dictionary['name'],
                                             value=dictionary['value'],
                                             inline=dictionary['inline'])
-
     return {"content":json['content'], "embed":set_embed}
 
 def group(*args):
@@ -100,7 +99,6 @@ def merge_dict(source, destination): # note: in python 3.9, operator `|=` exists
             merge_dict(value, node)
         else:
             destination[key] = value
-
     return destination
 
 

@@ -1,5 +1,5 @@
-'''Custom command handler'''
-from . import memoryhandler
+'''Custom commands handled at runtime'''
+from . import loadstufftomemory
 
 class CommandExists(Exception):
     '''An exception for of a command already exists'''
@@ -7,7 +7,7 @@ class CommandExists(Exception):
 def if_global(command):
     '''If a command is global'''
     try:
-        memoryhandler.access(guild_id="global", mode='', category='commands',
+        loadstufftomemory.access(guild_id="global", mode='', category='commands',
                              item=command, value=None)
         return True
     except KeyError:
@@ -16,7 +16,7 @@ def if_global(command):
 def if_local(command, guild_id=None):
     '''If a command is local'''
     try:
-        memoryhandler.access(guild_id=guild_id, mode='rlocal', category='commands',
+        loadstufftomemory.access(guild_id=guild_id, mode='local', category='commands',
                              item=command, value=None)
         return True
     except KeyError:
@@ -41,7 +41,7 @@ def create(command, ctx=None, guild_id=None, **kwargs):
             except:
                 pass
     if json:
-        memoryhandler.access(guild_id=guild_id, mode='w*', category='commands',
+        loadstufftomemory.access(guild_id=guild_id, mode='w*', category='commands',
                              item=command, value=json)
     else: raise TypeError('JSON cannot be empty')
 
@@ -49,4 +49,4 @@ def load(command, ctx=None, guild_id=None, mode='r'):
     '''Load saved commands'''
     if not guild_id:
         guild_id = ctx.guild.id
-    return memoryhandler.access(guild_id=guild_id, mode=mode, category='commands', item=command)
+    return loadstufftomemory.access(guild_id=guild_id, mode=mode, category='commands', item=command)
