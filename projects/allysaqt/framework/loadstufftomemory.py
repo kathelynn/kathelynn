@@ -20,7 +20,7 @@ def loadfile(file):
     except FileNotFoundError:
         print("If you'd like to run this bot, please follow the instructions found in README.md")
 
-MEMORY = loadfile(FILENAME)
+globals()['MEMORY'] = loadfile(FILENAME)
 
 def savefile(memory, file):
     '''Saves the file'''
@@ -37,14 +37,14 @@ def access(guild_id=None, category=None, item=None, value=None, mode=''):
         guild_id = str(guild_id)
 
     if 'r' in mode:
-        MEMORY = loadfile(FILENAME)
+        globals()['MEMORY'] = loadfile(FILENAME)
 
     if 'w' in mode:
         newdict = {guild_id: {category: {item: value}}}
-        formatting.merge_dict(newdict, MEMORY)
+        globals()['MEMORY'] = formatting.merge_dict(newdict, MEMORY)
 
     if 's' in mode:
-        savefile(MEMORY, FILENAME)
+        savefile(globals()['MEMORY'], FILENAME)
 
     local_only = False
     if 'local' in mode:

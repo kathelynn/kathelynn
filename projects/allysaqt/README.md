@@ -5,8 +5,7 @@ If you still want to run this bot locally, please do the following by order:
 1. Create a file named `config.json`. Inside the file, place the following:
 ```
 {
-    "token": "*TOKEN HERE*",
-    "tickrate":8,
+    "token": "TOKEN HERE",
     "filename":"allysaqt.json",
     "defaultprefix":"a$",
     "autosaveinterval":10

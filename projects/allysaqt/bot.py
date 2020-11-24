@@ -2,7 +2,7 @@
 testing = False
 import discord
 from discord.ext import commands
-import framework
+import framework # pylint:disable=import-error
 
 # COMMANDS
 
@@ -65,7 +65,6 @@ print(f"Modules loaded: {[module for module in loadedmodule]}")
 # with a string of your bot token, or try to ##
 # create a 'discord_token.json' file with the name and token inside the dictionary.
 TOKEN = framework.loadstufftomemory.config('token')
-try: 
-    BOT.run(TOKEN)
-except KeyboardInterrupt:
-    framework.loadstufftomemory.access('s')
+import atexit
+atexit.register(framework.loadstufftomemory.access, **{'mode':'s-'})
+BOT.run(TOKEN)
