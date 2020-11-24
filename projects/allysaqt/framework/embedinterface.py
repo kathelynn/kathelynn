@@ -1,19 +1,8 @@
 import asyncio
-from .moduleapi import framework
-from .moduleapi import BOT
 
 REACTIONS = {}
 EMBED_TIMEOUT = 15
 EMBED_TICKRATE = 8
-
-@BOT.event
-async def on_reaction_add(reaction, user):
-    '''Runs when a reaction gets added'''
-    if reaction.message.author == BOT.user:
-        dictionary = {str(reaction.message.channel.id): {str(user.id): reaction.emoji}}
-        framework.formatting.merge_dict(dictionary, REACTIONS)
-        await asyncio.sleep(30)
-        del REACTIONS[str(reaction.message.channel.id)][str(user.id)]
 
 async def interactive_reaction(ctx, message, buttons):
     '''Makes reactions on messages interactive'''

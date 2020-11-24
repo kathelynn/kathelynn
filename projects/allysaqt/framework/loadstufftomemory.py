@@ -8,7 +8,6 @@ def config(item):
         cfg = json.load(cfg)
         return cfg[item]
 
-FILENAME = config('filename')
 INTERVAL = config('autosaveinterval')*60
 
 def loadfile(file):
@@ -20,6 +19,7 @@ def loadfile(file):
     except FileNotFoundError:
         print("If you'd like to run this bot, please follow the instructions found in README.md")
 
+FILENAME = config('filename')
 globals()['MEMORY'] = loadfile(FILENAME)
 
 def savefile(memory, file):
@@ -37,14 +37,14 @@ def access(guild_id=None, category=None, item=None, value=None, mode=''):
         guild_id = str(guild_id)
 
     if 'r' in mode:
-        globals()['MEMORY'] = loadfile(FILENAME)
+        MEMORY = loadfile(FILENAME)
 
     if 'w' in mode:
         newdict = {guild_id: {category: {item: value}}}
-        globals()['MEMORY'] = formatting.merge_dict(newdict, MEMORY)
+        MEMORY = formatting.merge_dict(newdict, MEMORY)
 
     if 's' in mode:
-        savefile(globals()['MEMORY'], FILENAME)
+        savefile(MEMORY, FILENAME)
 
     local_only = False
     if 'local' in mode:
@@ -75,8 +75,6 @@ def prefix(bot=None, ctx=None, guild_id=None, mode='', prefix=None): # mode shou
     '''Prefix ??'''
     if not guild_id:
         guild_id = ctx.guild.id
-    if isinstance(guild_id, int):
-        guild_id = str(guild_id)
     return access(guild_id=guild_id, mode=mode,
                   category="settings", item="prefix", value=prefix)
 

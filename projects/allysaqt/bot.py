@@ -1,10 +1,9 @@
 '''Ally is a qt'''
 testing = False
+import asyncio
 import discord
 from discord.ext import commands
 import framework # pylint:disable=import-error
-
-# COMMANDS
 
 BOT = commands.Bot(command_prefix=framework.loadstufftomemory.prefix)
 
@@ -19,6 +18,17 @@ async def on_message(message):
     '''Runs when we get a message to log it'''
     print('{0.author} from {0.channel}: {0.content}'.format(message))
     await BOT.process_commands(message)
+
+REACTIONS = {}
+
+@BOT.event
+async def on_reaction_add(reaction, user):
+    '''Runs when a reaction gets added'''
+    if reaction.message.author == BOT.user:
+        dictionary = {str(reaction.message.channel.id): {str(user.id): reaction.emoji}}
+        framework.formatting.merge_dict(dictionary, REACTIONS)
+        await asyncio.sleep(30)
+        del REACTIONS[str(reaction.message.channel.id)][str(user.id)]
 
 @BOT.event
 async def on_command_error(ctx, error):
@@ -40,8 +50,15 @@ async def on_command_error(ctx, error):
     elif isinstance(error, discord.errors.Forbidden):
         pass
     else:
-        embed = discord.Embed.from_dict({"title":"Error", "description":str(error), "color":16711680})
+        embed = discord.Embed.from_dict({"title":"⚠️ Error", "description":str(error), "color":16711680})
         await ctx.send(embed=embed)
+
+import math, datetime
+@BOT.command()
+async def ping(self, ctx):
+    embed = discord.Embed.from_dict({"title": '🏓 Pong!', "color": 2896440, "fields": [{"name": "Latency",
+                                    "value": f"{math.floor((int(datetime.datetime.utcnow().strftime('%f')) - int(ctx.message.created_at.strftime('%f')))/1000)}ms"}]})
+    await ctx.send(embed=embed)
 
 '''For modules'''
 from os import listdir, getcwd
@@ -56,6 +73,7 @@ loadedmodule = []
 for module in modules:
     try:
         exec(f"from modules import {module}")
+        globals()[module].setup(BOT)
         loadedmodule.append(module)
     except Exception as e:
         print(e)
