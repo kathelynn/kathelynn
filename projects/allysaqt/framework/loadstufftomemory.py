@@ -1,14 +1,14 @@
-'''Memoryhandler'''
+from . import formatting
 import json
 import asyncio
-from . import formatting
 
+''' Loads config'''
 def config(item):
     with open('config.json') as cfg:
         cfg = json.load(cfg)
         return cfg[item]
 
-INTERVAL = config('autosaveinterval')*60
+FILENAME = config('filename')
 
 def loadfile(file):
     '''Loads the file'''
@@ -19,20 +19,17 @@ def loadfile(file):
     except FileNotFoundError:
         print("If you'd like to run this bot, please follow the instructions found in README.md")
 
-FILENAME = config('filename')
-globals()['MEMORY'] = loadfile(FILENAME)
+MEMORY = loadfile(FILENAME)
 
 def savefile(memory, file):
     '''Saves the file'''
-    try:
-        with open(file, 'w') as handle:
-            print('Disk read!')
-            json.dump(memory, handle, indent=4)
-            print('Memory saved!')
-    except FileNotFoundError:
-        print('')
+    with open(file, 'w') as handle:
+        print('Disk read!')
+        json.dump(memory, handle, indent=4)
+        print('Memory saved!')
 
 def access(guild_id=None, category=None, item=None, value=None, mode=''):
+    global MEMORY
     if isinstance(guild_id, int):
         guild_id = str(guild_id)
 
@@ -41,7 +38,10 @@ def access(guild_id=None, category=None, item=None, value=None, mode=''):
 
     if 'w' in mode:
         newdict = {guild_id: {category: {item: value}}}
+        print(newdict)
+        print(MEMORY)
         MEMORY = formatting.merge_dict(newdict, MEMORY)
+        print(MEMORY)
 
     if 's' in mode:
         savefile(MEMORY, FILENAME)
@@ -75,11 +75,14 @@ def prefix(bot=None, ctx=None, guild_id=None, mode='', prefix=None): # mode shou
     '''Prefix ??'''
     if not guild_id:
         guild_id = ctx.guild.id
-    return access(guild_id=guild_id, mode=mode,
+    prefix = access(guild_id=guild_id, mode=mode,
                   category="settings", item="prefix", value=prefix)
+    print(prefix)
+    return prefix
 
 async def autosave():
-    '''Autosaves the'''
+    '''Autosaves storage in case of power failure, etc.'''
+    INTERVAL = config('autosaveinterval')*60
     while True:
         await asyncio.sleep(INTERVAL)
         access(mode='s-')

@@ -1,2 +1,2 @@
 '''Shows what to import'''
-from . import commandsonruntime, loadstufftomemory, formatting, embedinterface
+from . import commandsonruntime, loadstufftomemory, formatting
