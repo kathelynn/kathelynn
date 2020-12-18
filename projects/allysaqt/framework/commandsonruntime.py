@@ -45,8 +45,23 @@ def create(command, ctx=None, guild_id=None, **kwargs):
                              item=command, value=json)
     else: raise TypeError('JSON cannot be empty')
 
-def load(command, ctx=None, guild_id=None, mode='r'):
+def load(ctx=None, guild_id=None, mode='r*'):
     '''Load saved commands'''
+    if '*' not in mode:
+        mode += '*'
     if not guild_id:
         guild_id = ctx.guild.id
-    return loadstufftomemory.access(guild_id=guild_id, mode=mode, category='commands', item=command)
+    commands = loadstufftomemory.access(guild_id=guild_id, mode=mode, category='commands')
+
+    command = ctx.message.content[len(ctx.prefix):].split()
+    if isinstance(command, list):
+        args = command[1:]
+        command = command[0].lower()
+    else:
+        command.lower()
+
+    print(commands)
+    for key, value in commands.items():
+        if command in key:
+            return value
+    raise KeyError(f'Command "{command}" is not found')

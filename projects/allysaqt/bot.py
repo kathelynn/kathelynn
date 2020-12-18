@@ -5,15 +5,21 @@ import discord
 from discord.ext import commands
 import framework # pylint:disable=import-error
 from framework import loadstufftomemory # pylint:disable=import-error
-MEMORY = loadstufftomemory.MEMORY
 
 BOT = commands.Bot(command_prefix=loadstufftomemory.prefix)
+
+async def autosave():
+    '''Autosaves storage in case of power failure, etc.'''
+    INTERVAL = loadstufftomemory.config('autosaveinterval')*60
+    while True:
+        await asyncio.sleep(INTERVAL)
+        loadstufftomemory.access(mode='s-')
 
 @BOT.event
 async def on_ready():
     '''Runs when the bot connects to discord'''
     print(f'Logged on as {BOT.user}!')
-    await loadstufftomemory.autosave()
+    await autosave()
 
 @BOT.event
 async def on_message(message):
@@ -28,7 +34,6 @@ async def on_reaction_add(reaction, user):
     '''Runs when a reaction is added'''
     if reaction.message.author == BOT.user:
         dictionary = {str(reaction.message.channel.id): {str(user.id): reaction.emoji}}
-        print(dictionary)
         framework.formatting.merge_dict(dictionary, REACTIONS)
         await asyncio.sleep(30)
         if REACTIONS[str(reaction.message.channel.id)][str(user.id)] == reaction:
@@ -36,9 +41,6 @@ async def on_reaction_add(reaction, user):
 
 EMBED_TIMEOUT = loadstufftomemory.config('embedtimeout')
 EMBED_TICKRATE = loadstufftomemory.config('embedtickrate')
-
-print(EMBED_TIMEOUT)
-print(EMBED_TICKRATE)
 
 async def interactive_reaction(ctx, message, buttons):
     '''Makes reactions on messages interactive'''
@@ -53,31 +55,25 @@ async def interactive_reaction(ctx, message, buttons):
             if channel_reactions[str(ctx.author.id)] in buttons:
                 reaction = buttons.index(channel_reactions[str(ctx.author.id)])
                 del REACTIONS[str(ctx.channel.id)][str(ctx.author.id)]
-                return reaction, None
+                return reaction
             elif REACTIONS[str(ctx.channel.id)][str(ctx.author.id)] == '❎':
                 del REACTIONS[str(ctx.channel.id)][str(ctx.author.id)]
-                return -1, 'cancelled'
+                return 'cancelled'
         await asyncio.sleep(secs)
-    return -1, 'timeout'
+    return 'timeout'
 
 @BOT.event
 async def on_command_error(ctx, error):
     '''To check if the command is a runtime command'''
     if isinstance(error, commands.CommandNotFound):
-        content = ctx.message.content[len(ctx.prefix):].split()
-        if isinstance(content, list):
-            content[0].lower()
-        else:
-            content.lower()
-        
-        ### temporary for now
-        embed = discord.Embed.from_dict({"title":"Error", "description":str(error), "color":16711680})
-        await ctx.send(embed=embed)
-
         try:
-            pass
-        except:
-            pass
+            command = framework.commandsonruntime.load(ctx=ctx)
+            if 'embed' in command:
+                command['embed'] = discord.Embed.from_dict(command['embed'])
+            await ctx.send(**command)
+        except Exception as e:
+            embed = discord.Embed.from_dict({"title":"Error", "description":str(e), "color":16711680})
+            await ctx.send(embed=embed)
     else:
         embed = discord.Embed.from_dict({"title":"⚠️ Error", "description":str(error), "color":16711680})
         await ctx.send(embed=embed)
@@ -94,105 +90,89 @@ async def ping(ctx):
 @BOT.command(aliases=['setting', 'set'])
 async def settings(ctx, arg=None, arg2=None):
     '''Settings command'''
-    permission_error = lambda arg, perm: f"Sorry, you need `{perm}` permission to access `{arg}` setting."
-    author_permissions = ctx.author.guild_permissions
     guild = ctx.guild
-    pfx = framework.loadstufftomemory.prefix(guild_id=guild.id)
+    author_guildperms = ctx.author.guild_permissions
+    permission_error = lambda arg, perm: f"Sorry, you need `{perm}` permission to access `{arg}` setting."
 
-    author = {'name': guild.name, 'icon_url': str(guild.icon_url)}
-    title = '⚙️ Settings'
-    description = f"`prefix`: `{framework.loadstufftomemory.prefix}`"
-    color = 2896440
+    embed = {}
+    embed['author'] = {'name': guild.name, 'icon_url': str(guild.icon_url)}
+    embed['title'] = "⚙️ Settings"
+    embed['description'] = f"`prefix`: `{ctx.prefix}`"
+    embed['color'] = 2896440
 
     if arg == 'prefix':
-        title = f'{title} > Prefix'
-        description = f"Prefix for `{guild.id}`: `{pfx}`"
+        embed['title'] = f"{embed['title']} > Prefix"
+        embed['description'] = f"Prefix for `{guild.id}`: `{ctx.prefix}`"
         if arg2:
-            if not author_permissions.manage_guild:
+            if not author_guildperms.manage_guild:
                 # 'Guild' is 'Server' in Discord UX context
-                description = permission_error('prefix', 'Manage Server')
-                color = 16711680
+                embed['description'] = permission_error('prefix', 'Manage Server')
+                embed['color'] = 16711680
             elif len(arg2) > 3:
-                description += f"\nSorry! `{arg2}` is {framework.formatting.plurality(len(arg2) - 3, 'character')} too long."
-                color = 16711680
+                embed['description'] += f"\nSorry! `{arg2}` is {framework.formatting.plurality(len(arg2) - 3, 'character')} too long."
+                embed['color'] = 16711680
             else:
                 pfx = framework.loadstufftomemory.prefix(guild_id=guild.id, mode='w', prefix=arg2)
-                description += f"> `{pfx}`\nBot prefix has been changed!"
-                color = 65280
+                embed['description'] += f"> `{pfx}`\nBot prefix has been changed!"
+                embed['color'] = 65280
 
-    embed = framework.formatting.make_dict(embed={"title": title, "description": description,
-                                                "color": color, "author": author})
-    await ctx.send(**framework.formatting.json_embed(embed))
+    await ctx.send(embed=discord.Embed.from_dict(embed))
 
 @BOT.command(aliases=['ccommands', 'cc'])
-async def customcommands(ctx, arg=None, path='00'):
+async def customcommands(ctx, arg=None):
     '''Custom commands command'''
-    end = False
-    while not end:
-        choices = None
-        buttons = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟']
+    path = '--'
+    while path:
         guild = ctx.guild
-        prefix = framework.loadstufftomemory.prefix(guild_id=guild.id)
+        buttons = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟']
+        choices = []
+        errors = ['cancelled', 'timeout']
 
-        author = {'name': guild.name, 'icon_url': str(guild.icon_url)}
-        title = 'Custom Commands'
-        description = None
-        fields = None
-        footer = None
-        color = 800868
+        embed = {}
+        embed['author'] = {'name': guild.name, 'icon_url': str(guild.icon_url)}
+        embed['title'] = 'Custom Commands'
+        embed['description'] = None
+        embed['fields'] = None
+        embed['footer'] = None
+        embed['color'] = 800868
 
         if not arg:
-            fields = [{'name': f'`{prefix}{ctx.invoked_with} create`', 'value':'Initialize embed creation tool'}]
-        if arg == 'create':
-            title = f'{title} > Create'
-            description = "Work in Progress\n`1.` Foo\n`2.` Bar"
-            choices = ['a', 'b0']
+            embed['fields'] = [{'name': f'`{ctx.prefix}{ctx.invoked_with} create`', 'value':'Initialize embed creation tool'}]
+        elif arg == 'create':
+            choices = ['00', '10']
+            embed['title'] = f"{embed['title']} > Create"
+            embed['description'] = "Work in Progress\n`1.` Foo\n`2.` Bar"
 
-            if path == 'cancelled':
-                description = 'Operation cancelled.'
-                color = 16711680
-                end = True
-            if path == 'timeout':
-                description = 'Timeout exceeded. Please try again'
-                color = 16711680
-            if path[0] == 'a':
-                description = 'End'
-                end = True
-            elif path[0] == 'b':
-                description = "Work in progress\n`1.` Foobar\n`2.` Barfoo"
-                choices = ['ba', 'bb']
-                if path[1] == 'a':
-                    description = "Foobar picked!"
-                    end = True
-                if path[1] == 'b':
-                    description = "Barfoo picked!"
-                    end = True
+            if path[0] == '0':
+                embed['description'] = 'End'
+            elif path[0] == '1':
+                choices = ['10', '11']
+                embed['description'] = "Work in progress\n`1.` Foobar\n`2.` Barfoo"
+                if path[1] == '0':
+                    embed['description'] = "Foobar picked!"
+                if path[1] == '1':
+                    embed['description'] = "Barfoo picked!"
 
-        embed_JSON = {}    
-        for embed in ['title', 'description', 'color', 'footer', 'author', 'fields']:
-            value = locals()[embed]
-            if value:
-                embed_JSON[embed] = value
-            
-        embed = discord.Embed.from_dict({"title": title, "description":description, "color": color,
-                                        "footer": footer, "author": author, "fields":fields})
-
+        if path == 'cancelled':
+            embed['description'] = 'Operation cancelled.'
+            embed['color'] = 16711680
+        elif path == 'timeout':
+            embed['description'] = 'Timeout exceeded. Please try again'
+            embed['color'] = 16711680
+        
         try:
-            botmsg
-            #await botmsg.edit(**modules.formatting.json_embed(embed))
             await botmsg.clear_reactions()
-            await botmsg.edit(embed=embed)
+            await botmsg.edit(embed=discord.Embed.from_dict(embed))
         except NameError:
-            botmsg = await ctx.send(embed=embed)
-            #await ctx.send(**modules.formatting.json_embed(embed))
-
-        if choices and not end:
-            path_result, embed_error = await interactive_reaction(ctx, botmsg, buttons[:len(choices)])
-            if embed_error:
-                path_result = embed_error
-            else:
-                path_result = choices[path_result]
-            path = path_result
+            botmsg = await ctx.send(embed=discord.Embed.from_dict(embed))
+        
+        if choices and path not in choices + errors:
+            path = await interactive_reaction(ctx, botmsg, buttons[:len(choices)])
+            if isinstance(path, int):
+                path = choices[path]
+            del choices
+        else:
+            break
 
 # '''For modules'''
 # from os import listdir, getcwd

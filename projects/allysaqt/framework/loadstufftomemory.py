@@ -1,14 +1,11 @@
 from . import formatting
 import json
-import asyncio
 
-''' Loads config'''
 def config(item):
+    ''' Loads config'''
     with open('config.json') as cfg:
         cfg = json.load(cfg)
         return cfg[item]
-
-FILENAME = config('filename')
 
 def loadfile(file):
     '''Loads the file'''
@@ -19,6 +16,7 @@ def loadfile(file):
     except FileNotFoundError:
         print("If you'd like to run this bot, please follow the instructions found in README.md")
 
+FILENAME = config('filename')
 MEMORY = loadfile(FILENAME)
 
 def savefile(memory, file):
@@ -29,19 +27,12 @@ def savefile(memory, file):
         print('Memory saved!')
 
 def access(guild_id=None, category=None, item=None, value=None, mode=''):
-    global MEMORY
     if isinstance(guild_id, int):
         guild_id = str(guild_id)
 
-    if 'r' in mode:
-        MEMORY = loadfile(FILENAME)
-
     if 'w' in mode:
         newdict = {guild_id: {category: {item: value}}}
-        print(newdict)
-        print(MEMORY)
-        MEMORY = formatting.merge_dict(newdict, MEMORY)
-        print(MEMORY)
+        formatting.merge_dict(newdict, MEMORY)
 
     if 's' in mode:
         savefile(MEMORY, FILENAME)
@@ -52,8 +43,7 @@ def access(guild_id=None, category=None, item=None, value=None, mode=''):
 
     if '*' in mode:
         try:
-            MEMORY[guild_id][category]
-            return MEMORY[guild_id][category]
+            return MEMORY[guild_id][category] + MEMORY["global"][category]
         except KeyError:    
             if not local_only:
                 return MEMORY["global"][category]
@@ -77,12 +67,4 @@ def prefix(bot=None, ctx=None, guild_id=None, mode='', prefix=None): # mode shou
         guild_id = ctx.guild.id
     prefix = access(guild_id=guild_id, mode=mode,
                   category="settings", item="prefix", value=prefix)
-    print(prefix)
     return prefix
-
-async def autosave():
-    '''Autosaves storage in case of power failure, etc.'''
-    INTERVAL = config('autosaveinterval')*60
-    while True:
-        await asyncio.sleep(INTERVAL)
-        access(mode='s-')
