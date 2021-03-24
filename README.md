@@ -1,4 +1,4 @@
-### Hiiii ❤️ヾ(＾∇＾) | [My Website](https://kathy.aishiteru.moe) | 
+### Hiiii ❤️ヾ(＾∇＾) | [My Website](https://kathy.aishiteru.moe) | [Other stuff I do](https://kathy.aishiteru.moe/wowks)
 
 I'm taking on Computer Science because I love technical and theory things. I also want to improve user experience by finding actual solutions, all while not sacrificing one for another.
 
